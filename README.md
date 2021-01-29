@@ -1,3 +1,10 @@
+# AAVEtrage
+
+An AAVE dashboard with a focus on interest rate arbitrage oppurtunities. The Web3 component of this project is built with scaffold-eth. Check out below for details on building on this project locally.
+
+
+
+
 # 🏗 scaffold-eth
 
 > is everything you need to get started building decentralized applications powered by smart contracts
