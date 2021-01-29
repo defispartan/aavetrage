@@ -55,5 +55,8 @@
       "**/@graphprotocol/graph-ts",
       "**/@graphprotocol/graph-ts/**"
     ]
+  },
+  "dependencies": {
+    "reactstrap": "^8.9.0"
   }
 }
