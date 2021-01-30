@@ -1,47 +1,32 @@
-.App {
-  text-align: center;
-  font-family: sans-serif;
-}
+
 
 
 
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
 
 
   
   .header{
-    position: block;
-    top: 0px;
-    width: 50%;
-    margin: 0 auto;
     text-align: center;
-    min-width: 350px;
+    padding: 20px;
   }
-  .aavetragelogo{
-  width: 100%;
+  .aavetrageimage, .portfolioimage{
+    width: 50%;
+    min-width: 300px;
   
   }
+
+  .aboutimage{
+    width: 30%;
+    min-width: 300px;
+  }
+
   .fa-home
   {
     color: white;
@@ -199,6 +184,7 @@ font-size: 1.15em;
   font-family: sans-serif;
   color:white;
   padding-top: 50px;
+  padding-bottom: 50px;
   width: 75%;
   margin: 0 auto;
 }
@@ -222,6 +208,7 @@ font-size: 1.15em;
   margin-left: 20px;
   border: 1px solid black;
   clear: both;
+  vertical-align: middle;
 }
 
 .blue{
@@ -266,5 +253,39 @@ text-align: center;
   font-size: 1rem;
 }
 
+.portfolioheader{
+  font-family: 'Orbitron', sans-serif;
+  color: white;
+}
 
+.marketheaderblock{
+  float:left;
+  width: 50%;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  color: white;
+  
+}
 
+.borrowpower{
+  width: 75%;
+  margin: 0 auto;
+}
+
+.marketcard{
+  width: 90%;
+  margin: 0 auto;
+  margin-bottom: 50px;
+}
+
+.actionbuttonrow{
+  text-align: center;
+  width: 100%;
+  margin: 0 auto;
+  padding-bottom: 30px;
+}
+
+.actionbutton{
+  margin-left: 10px;
+  margin-right: 10px;
+}

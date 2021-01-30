@@ -67,7 +67,7 @@ const Home = () => {
                 </div>
                 <div className="header">
 
-                    <img src={logo} className="aavetragelogo" alt="aavetrage" />
+                    <img src={logo} className="aavetrageimage" alt="aavetrage" />
                 </div>
 
 

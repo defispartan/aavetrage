@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Switch, Route, Link } from "react-router-dom";
 import "../App.css";
-
-
+import AboutImg from '../assets/img/about.png'
 
 
 function About(props) {
@@ -59,7 +58,7 @@ function About(props) {
                 </div>
                 <div className="header">
 
-                    <h1 className="aboutpageheader">About</h1>
+                    <img src={AboutImg} className="aboutimage" alt='about'></img>
                 </div>
 
 

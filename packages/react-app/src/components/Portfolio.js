@@ -1,65 +1,20 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Switch, Route, Link } from "react-router-dom";
-import "antd/dist/antd.css";
-import { JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
 import "../App.css";
-import { Row, Col, Button, Menu } from "antd";
-import Web3Modal from "web3modal";
-import WalletConnectProvider from "@walletconnect/web3-provider";
-import { useUserAddress } from "eth-hooks";
-import { useExchangePrice, useGasPrice, useUserProvider, useContractLoader, useContractReader, useEventListener, useBalance, useExternalContractLoader } from "../hooks";
-import { Header, Account, Faucet, Ramp, Contract, GasGauge } from "./";
-import { Transactor } from "../helpers";
-import { formatEther, parseEther } from "@ethersproject/units";
-//import Hints from "./Hints";
-import { Hints, ExampleUI } from "../views"
-/*
-    Welcome to 🏗 scaffold-eth !
-
-    Code:
-    https://github.com/austintgriffith/scaffold-eth
-
-    Support:
-    https://t.me/joinchat/KByvmRe5wkR-8F_zz6AjpA
-    or DM @austingriffith on twitter or telegram
-
-    You should get your own Infura.io ID and put it in `constants.js`
-    (this is your connection to the main Ethereum network for ENS etc.)
-
-
-    📡 EXTERNAL CONTRACTS:
-    You can also bring in contract artifacts in `constants.js`
-    (and then use the `useExternalContractLoader()` hook!)
-*/
-import { INFURA_ID, DAI_ADDRESS, DAI_ABI } from "../constants";
-
-// 😬 Sorry for all the console logging 🤡
-const DEBUG = true
-
-// 🔭 block explorer URL
-const blockExplorer = "https://etherscan.io/" // for xdai: "https://blockscout.com/poa/xdai/"
-
-// 🛰 providers
-if (DEBUG) console.log("📡 Connecting to Mainnet Ethereum");
-//const mainnetProvider = getDefaultProvider("mainnet", { infura: INFURA_ID, etherscan: ETHERSCAN_KEY, quorum: 1 });
-// const mainnetProvider = new InfuraProvider("mainnet",INFURA_ID);
-const mainnetProvider = new JsonRpcProvider("https://mainnet.infura.io/v3/" + INFURA_ID)
-// ( ⚠️ Getting "failed to meet quorum" errors? Check your INFURA_ID)
-console.log("window.location.hostname", window.location.hostname)
-// 🏠 Your local provider is usually pointed at your local blockchain
-const localProviderUrl = "http://" + window.location.hostname + ":8545"; // for xdai: https://dai.poa.network
-// as you deploy to other networks you can set REACT_APP_PROVIDER=https://dai.poa.network in packages/react-app/.env
-const localProviderUrlFromEnv = process.env.REACT_APP_PROVIDER ? process.env.REACT_APP_PROVIDER : localProviderUrl;
-if (DEBUG) console.log("🏠 Connecting to provider:", localProviderUrlFromEnv);
-const localProvider = new JsonRpcProvider(localProviderUrlFromEnv);
+import PortfolioImg from '../assets/img/portfolio.png'
+import AAVEText from '../assets/img/aavetext.png'
+import { Button, Card, CardHeader, Container, Progress, Table } from 'reactstrap';
 
 
 
 function Portfolio(props) {
-    const [injectedProvider, setInjectedProvider] = useState();
+
     const [homeHover, setHomeHover] = useState(false)
     const [portfolioHover, setPortfolioHover] = useState(false)
     const [aboutHover, setAboutHover] = useState(false)
+    const [v1Action, setV1Action] = useState(null)
+    const [v2Action, setV2Action] = useState(null)
+
 
     const displayText = (icon) => {
 
@@ -76,293 +31,262 @@ function Portfolio(props) {
             return (<></>)
         }
     }
-    /* 💵 this hook will get the price of ETH from 🦄 Uniswap: */
-    const price = useExchangePrice(mainnetProvider); //1 for xdai
 
-    /* 🔥 this hook will get the price of Gas from ⛽️ EtherGasStation */
-    const gasPrice = useGasPrice("fast"); //1000000000 for xdai
-
-    // For more hooks, check out 🔗eth-hooks at: https://www.npmjs.com/package/eth-hooks
-
-    // Use your injected provider from 🦊 Metamask or if you don't have it then instantly generate a 🔥 burner wallet.
-    const userProvider = useUserProvider(injectedProvider, localProvider);
-    const address = useUserAddress(userProvider);
-
-    // The transactor wraps transactions and provides notificiations
-    const tx = Transactor(userProvider, gasPrice)
-
-    // Faucet Tx can be used to send funds from the faucet
-    const faucetTx = Transactor(localProvider, gasPrice)
-
-    // 🏗 scaffold-eth is full of handy hooks like this one to get your balance:
-    const yourLocalBalance = useBalance(localProvider, address);
-    if (DEBUG) console.log("💵 yourLocalBalance", yourLocalBalance ? formatEther(yourLocalBalance) : "...")
-
-    // just plug in different 🛰 providers to get your balance on different chains:
-    const yourMainnetBalance = useBalance(mainnetProvider, address);
-    if (DEBUG) console.log("💵 yourMainnetBalance", yourMainnetBalance ? formatEther(yourMainnetBalance) : "...")
-
-    // Load in your local 📝 contract and read a value from it:
-    const readContracts = useContractLoader(localProvider)
-    if (DEBUG) console.log("📝 readContracts", readContracts)
-
-    // If you want to make 🔐 write transactions to your contracts, use the userProvider:
-    const writeContracts = useContractLoader(userProvider)
-    if (DEBUG) console.log("🔐 writeContracts", writeContracts)
-
-    // EXTERNAL CONTRACT EXAMPLE:
-    //
-    // If you want to bring in the mainnet DAI contract it would look like:
-    //const mainnetDAIContract = useExternalContractLoader(mainnetProvider, DAI_ADDRESS, DAI_ABI)
-    //console.log("🥇DAI contract on mainnet:",mainnetDAIContract)
-    //
-    // Then read your DAI balance like:
-    //const myMainnetBalance = useContractReader({DAI: mainnetDAIContract},"DAI", "balanceOf",["0x34aA3F359A9D614239015126635CE7732c18fDF3"])
-    //
-
-    // keep track of a variable from the contract in the local React state:
-    const purpose = useContractReader(readContracts, "YourContract", "purpose")
-    console.log("🤗 purpose:", purpose)
-
-    //📟 Listen for broadcast events
-    const setPurposeEvents = useEventListener(readContracts, "YourContract", "SetPurpose", localProvider, 1);
-    console.log("📟 SetPurpose events:", setPurposeEvents)
-
-    /*
-    const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
-    console.log("🏷 Resolved austingriffith.eth as:",addressFromENS)
-    */
-
-    const loadWeb3Modal = useCallback(async () => {
-        const provider = await web3Modal.connect();
-        setInjectedProvider(new Web3Provider(provider));
-    }, [setInjectedProvider]);
-
-    useEffect(() => {
-        if (web3Modal.cachedProvider) {
-            loadWeb3Modal();
+    const displayV1ActionPanel = () => {
+        if (v1Action !== null) {
+            return (
+                <Card className="shadow marketcard">
+                    <CardHeader className="border-0">
+                        <h3>{v1Action}</h3>
+                    </CardHeader>
+                </Card>
+            )
         }
-    }, [loadWeb3Modal]);
+        else {
 
-    const [route, setRoute] = useState();
-    useEffect(() => {
-        setRoute(window.location.pathname)
-    }, [setRoute]);
+            return <></>
+        }
+    }
 
-    let faucetHint = ""
-    const [faucetClicked, setFaucetClicked] = useState(false);
-    if (!faucetClicked && localProvider && localProvider._network && localProvider._network.chainId == 31337 && yourLocalBalance && formatEther(yourLocalBalance) <= 0) {
-        faucetHint = (
-            <div style={{ padding: 16 }}>
-                <Button type={"primary"} onClick={() => {
-                    faucetTx({
-                        to: address,
-                        value: parseEther("0.01"),
-                    });
-                    setFaucetClicked(true)
-                }}>
-                    💰 Grab funds from the faucet ⛽️
-        </Button>
-            </div>
-        )
+    const displayV2ActionPanel = () => {
+        if (v2Action !== null) {
+            return (
+                <Card className="shadow marketcard">
+                    <CardHeader className="border-0">
+                        <h3>{v2Action}</h3>
+                    </CardHeader>
+                </Card>
+            )
+        }
+        else {
+
+            return <></>
+        }
+    }
+
+    const setAction = (market, action) => {
+        if (market === 'v1') {
+            setV1Action(action)
+        }
+        else if (market === 'v2') {
+            setV2Action(action)
+        }
     }
 
     return (
         <div className="App">
+            <header className="App-header">
+                <div className="select">
+                    <Link to={'/index'} >
 
-            <div className="select">
-                <Link to={'/index'} >
+                        <div onMouseEnter={() => setHomeHover(true)} onMouseLeave={() => setHomeHover(false)} className="icon">
 
-                    <div onMouseEnter={() => setHomeHover(true)} onMouseLeave={() => setHomeHover(false)} className="icon">
+                            <i className="fa fa-home circle-icon"></i>
+                            {displayText("home")}
 
-                        <i className="fa fa-home circle-icon"></i>
-                        {displayText("home")}
+                        </div >
+                    </Link>
+                    <Link to={'/portfolio'} >
+                        <div onMouseEnter={() => setPortfolioHover(true)} onMouseLeave={() => setPortfolioHover(false)} className="icon">
 
-                    </div >
-                </Link>
-                <Link to={'/portfolio'} >
-                    <div onMouseEnter={() => setPortfolioHover(true)} onMouseLeave={() => setPortfolioHover(false)} className="icon">
+                            <i className="fa fa-folder circle-icon"></i>
+                            {displayText("portfolio")}
 
-                        <i className="fa fa-folder circle-icon"></i>
-                        {displayText("portfolio")}
+                        </div>
+                    </Link>
+                    <Link to={'/about'} >
+                        <div onMouseEnter={() => setAboutHover(true)} onMouseLeave={() => setAboutHover(false)} className="icon">
 
+                            <i className="fa fa-info circle-icon"></i>
+                            {displayText("about")}
+
+                        </div>
+                    </Link>
+                </div>
+                <div className="header">
+
+                    <img src={PortfolioImg} className="portfolioimage" alt='portfolio'></img>
+                </div>
+
+
+                <div className="asset">
+
+                    <h3 className="portfolioheader">AAVE Portfolio Balance</h3>
+                    <h3 className="portfolioheader" style={{ fontFamily: 'Open Sans', paddingBottom: "50px" }}>$21,000,000.00</h3>
+
+                    <div className="marketoverview">
+
+                        <div className="marketheaderblock" style={{ paddingBottom: "75px" }}>
+                            <h4 style={{ color: 'white' }}>AAVE V1 Market</h4>
+                            <div className="marketheaderblock">
+                                <p>Deposits</p>
+                                <p style={{ fontFamily: 'Open Sans' }}>$10,000,000.00</p>
+                            </div>
+                            <div className="marketheaderblock">
+                                <p>Borrows</p>
+                                <p style={{ fontFamily: 'Open Sans' }}>$5,000,000.00</p>
+                            </div>
+                            <div className="borrowpower">
+                                <h5 style={{ color: 'white' }}>Borrowing Power - 75%</h5>
+                                <Progress value="75" />
+                            </div>
+
+                        </div>
+                        <div className="marketheaderblock" style={{ paddingBottom: "75px" }}>
+                            <h4 style={{ color: 'white' }}>AAVE V2 Market</h4>
+                            <div className="marketheaderblock">
+                                <p>Deposits</p>
+                                <p style={{ fontFamily: 'Open Sans' }}>$21,000,000.00</p>
+                            </div>
+                            <div className="marketheaderblock">
+                                <p>Borrows</p>
+                                <p style={{ fontFamily: 'Open Sans' }}>$5,000,000.00</p>
+                            </div>
+                            <div className="borrowpower">
+                                <h5 style={{ color: 'white' }}>Borrowing Power - 40%</h5>
+                                <Progress value="40" />
+                            </div>
+
+                        </div>
                     </div>
-                </Link>
-                <Link to={'/about'} >
-                    <div onMouseEnter={() => setAboutHover(true)} onMouseLeave={() => setAboutHover(false)} className="icon">
 
-                        <i className="fa fa-info circle-icon"></i>
-                        {displayText("about")}
+                    <div className="ratematrix">
 
+                        <Card className="shadow marketcard">
+                            <CardHeader className="border-0">
+                                <h3>AAVE V1 Market</h3>
+                            </CardHeader>
+                            <Table className="align-items-center table-flush" responsive>
+                                <thead className="thead-light">
+                                    <tr>
+                                        <th colspan="3">Deposits</th>
+                                        <th colspan="3">Borrows</th>
+                                    </tr>
+                                    <tr>
+                                        <th>Asset</th>
+                                        <th>Interest Rate</th>
+                                        <th>USD Value</th>
+                                        <th>Asset</th>
+                                        <th>Interest Rate</th>
+                                        <th>USD Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    <tr>
+                                        <td>1,000,000 USDC</td>
+                                        <td>14.21% Variable</td>
+                                        <td>$1,000,000</td>
+                                        <td>500,000 DAI</td>
+                                        <td>7.21% Stable</td>
+                                        <td>$500,000</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2000 AAVE</td>
+                                        <td>0.21% Variable</td>
+                                        <td>$560,000</td>
+                                        <td>250,000 TUSD</td>
+                                        <td>13.1% Variable</td>
+                                        <td>$250,000</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2000 SNX</td>
+                                        <td>2.5% Variable</td>
+                                        <td>$33,000</td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </Table>
+                        </Card>
+                        <div className="actionbuttonrow">
+                            <Button className="actionbutton" onClick={() => { setAction('v1', 'Deposit') }}>Deposit</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v1', 'Withdraw') }}>Withdraw</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v1', 'Collateral Swap') }}> Collateral Swap</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v1', 'AAVEtrage') }} style={{ backgroundColor: '#B6509E', marginTop: '0px' }}>AAVEtrage</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v1', 'Borrow') }} >Borrow</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v1', 'Payback') }}>Payback</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v1', 'Debt Swap') }}>Debt Swap</Button>
+                        </div>
+                        {displayV1ActionPanel()}
                     </div>
-                </Link>
-            </div>
+
+
+                    <div className="ratematrix">
+
+                        <Card className="shadow marketcard">
+                            <CardHeader className="border-0">
+                                <h3>AAVE V2 Market</h3>
+                            </CardHeader>
+                            <Table className="align-items-center table-flush" responsive>
+                                <thead className="thead-light">
+                                    <tr>
+                                        <th colspan="3">Deposits</th>
+                                        <th colspan="3">Borrows</th>
+                                    </tr>
+                                    <tr>
+                                        <th>Asset</th>
+                                        <th>Interest Rate</th>
+                                        <th>USD Value</th>
+                                        <th>Asset</th>
+                                        <th>Interest Rate</th>
+                                        <th>USD Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    <tr>
+                                        <td>1,000,000 USDC</td>
+                                        <td>14.21% Variable</td>
+                                        <td>$1,000,000</td>
+                                        <td>500,000 DAI</td>
+                                        <td>7.21% Stable</td>
+                                        <td>$500,000</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2000 AAVE</td>
+                                        <td>0.21% Variable</td>
+                                        <td>$560,000</td>
+                                        <td>250,000 TUSD</td>
+                                        <td>13.1% Variable</td>
+                                        <td>$250,000</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2000 SNX</td>
+                                        <td>2.5% Variable</td>
+                                        <td>$33,000</td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </Table>
+                        </Card>
+                        <div className="actionbuttonrow">
+                            <Button className="actionbutton" onClick={() => { setAction('v2', 'Deposit') }}>Deposit</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v2', 'Withdraw') }}>Withdraw</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v2', 'Collateral Swap') }}> Collateral Swap</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v2', 'AAVEtrage') }} style={{ backgroundColor: '#B6509E', marginTop: '0px' }}>AAVEtrage</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v2', 'Borrow') }} >Borrow</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v2', 'Payback') }}>Payback</Button>
+                            <Button className="actionbutton" onClick={() => { setAction('v2', 'Debt Swap') }}>Debt Swap</Button>
+                        </div>
+                        {displayV2ActionPanel()}
+                    </div>
 
 
 
-            <BrowserRouter>
-                <div style={{ width: "75%", margin: '0 auto', color: 'red' }}>Under Construction...</div>
-                <Menu style={{ textAlign: "center" }} selectedKeys={[route]} mode="horizontal">
-                    <Menu.Item key="/">
-                        <Link onClick={() => { setRoute("/") }} to="/">YourContract</Link>
-                    </Menu.Item>
-                    <Menu.Item key="/hints">
-                        <Link onClick={() => { setRoute("/hints") }} to="/hints">Hints</Link>
-                    </Menu.Item>
-                    <Menu.Item key="/exampleui">
-                        <Link onClick={() => { setRoute("/exampleui") }} to="/exampleui">ExampleUI</Link>
-                    </Menu.Item>
-
-                </Menu>
-
-                <Switch>
-                    <Route exact path="/">
-                        {/*
-                🎛 this scaffolding is full of commonly used components
-                this <Contract/> component will automatically parse your ABI
-                and give you a form to interact with it locally
-            */}
-
-                        <Contract
-                            name="YourContract"
-                            signer={userProvider.getSigner()}
-                            provider={localProvider}
-                            address={address}
-                            blockExplorer={blockExplorer}
-                        />
+                </div>
 
 
-                        { /* uncomment for a second contract:
-            <Contract
-              name="SecondContract"
-              signer={userProvider.getSigner()}
-              provider={localProvider}
-              address={address}
-              blockExplorer={blockExplorer}
-            />
-            */ }
 
-                        { /* Uncomment to display and interact with an external contract (DAI on mainnet):
-            <Contract
-              name="DAI"
-              customContract={mainnetDAIContract}
-              signer={userProvider.getSigner()}
-              provider={mainnetProvider}
-              address={address}
-              blockExplorer={blockExplorer}
-            />
-            */ }
-                    </Route>
-                    <Route path="/hints">
-                        <Hints
-                            address={address}
-                            yourLocalBalance={yourLocalBalance}
-                            mainnetProvider={mainnetProvider}
-                            price={price}
-                        />
-                    </Route>
-                    <Route path="/exampleui">
-                        <ExampleUI
-                            address={address}
-                            userProvider={userProvider}
-                            mainnetProvider={mainnetProvider}
-                            localProvider={localProvider}
-                            yourLocalBalance={yourLocalBalance}
-                            price={price}
-                            tx={tx}
-                            writeContracts={writeContracts}
-                            readContracts={readContracts}
-                            purpose={purpose}
-                            setPurposeEvents={setPurposeEvents}
-                        />
-                    </Route>
-                </Switch>
-            </BrowserRouter>
-
-
-            {/* 👨‍💼 Your account is in the top right with a wallet at connect options */}
-            <div style={{ position: "fixed", textAlign: "right", right: 0, top: 0, padding: 10 }}>
-                <Account
-                    address={address}
-                    localProvider={localProvider}
-                    userProvider={userProvider}
-                    mainnetProvider={mainnetProvider}
-                    price={price}
-                    web3Modal={web3Modal}
-                    loadWeb3Modal={loadWeb3Modal}
-                    logoutOfWeb3Modal={logoutOfWeb3Modal}
-                    blockExplorer={blockExplorer}
-                />
-                {faucetHint}
-            </div>
-
-            {/* 🗺 Extra UI like gas price, eth price, faucet, and support: */}
-            <div style={{ position: "fixed", textAlign: "left", left: 0, bottom: 20, padding: 10 }}>
-                <Row align="middle" gutter={[4, 4]}>
-                    <Col span={8}>
-                        <Ramp price={price} address={address} />
-                    </Col>
-
-                    <Col span={8} style={{ textAlign: "center", opacity: 0.8 }}>
-                        <GasGauge gasPrice={gasPrice} />
-                    </Col>
-                    <Col span={8} style={{ textAlign: "center", opacity: 1 }}>
-                        <Button
-                            onClick={() => {
-                                window.open("https://t.me/joinchat/KByvmRe5wkR-8F_zz6AjpA");
-                            }}
-                            size="large"
-                            shape="round"
-                        >
-                            <span style={{ marginRight: 8 }} role="img" aria-label="support">
-                                💬
-               </span>
-               Support
-             </Button>
-                    </Col>
-                </Row>
-
-                <Row align="middle" gutter={[4, 4]}>
-                    <Col span={24}>
-                        {
-
-                            /*  if the local provider has a signer, let's show the faucet:  */
-                            localProvider && localProvider.connection && localProvider.connection.url && localProvider.connection.url.indexOf(window.location.hostname) >= 0 && !process.env.REACT_APP_PROVIDER && price > 1 ? (
-                                <Faucet localProvider={localProvider} price={price} ensProvider={mainnetProvider} />
-                            ) : (
-                                    ""
-                                )
-                        }
-                    </Col>
-                </Row>
-            </div>
-
-        </div>
+            </header></div >
     );
 }
 
-
-/*
-  Web3 modal helps us "connect" external wallets:
-*/
-const web3Modal = new Web3Modal({
-    // network: "mainnet", // optional
-    cacheProvider: true, // optional
-    providerOptions: {
-        walletconnect: {
-            package: WalletConnectProvider, // required
-            options: {
-                infuraId: INFURA_ID,
-            },
-        },
-    },
-});
-
-const logoutOfWeb3Modal = async () => {
-    await web3Modal.clearCachedProvider();
-    setTimeout(() => {
-        window.location.reload();
-    }, 1);
-};
-
 export default Portfolio;
+
+
+
+
