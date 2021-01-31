@@ -18,7 +18,7 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 //
 // Select the network you want to deploy to here:
 //
-const defaultNetwork = "localhost";
+const defaultNetwork = "hardhat";
 
 function mnemonic() {
   try {
@@ -40,6 +40,12 @@ module.exports = {
   // (you will need to restart the `yarn run start` dev server after editing the .env)
 
   networks: {
+    hardhat: {
+      forking:{
+        url: "https://eth-mainnet.alchemyapi.io/v2/"+process.env.ALCHEMY_KEY,
+        blockNumber: 11758750
+      }
+    },
     localhost: {
       url: "http://localhost:8545",
       /*
@@ -47,6 +53,7 @@ module.exports = {
         (you can put in a mnemonic here to set the deployer locally)
       */
     },
+
     rinkeby: {
       url: "https://rinkeby.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", //<---- YOUR INFURA ID! (or it won't work)
       accounts: {
@@ -385,3 +392,143 @@ task("send", "Send ETH")
 
     return send(fromSigner, txRequest);
 });
+
+task("aaveV1LoadLendingPoolAddress", "Fetch AaveV1 LendingPool Mainnet Address")
+  .setAction(async (taskArgs, { network, ethers }) => {
+      addressProviderABI = require("./contracts/external_abi/aave_v1/LendingPoolAddressesProvider.json");
+
+      // this is mainnet address
+      addressProvider = new ethers.Contract("0x24a42fD28C976A61Df5D00D0599C34c4f90748c8", addressProviderABI, ethers.getDefaultProvider());
+      console.log("LendingPool address:", await addressProvider.getLendingPool());
+  })
+
+
+async function FetchAndLogAccountHealth(lendingPool, address) {
+  try {
+      userAccountData = await lendingPool.getUserAccountData(address);
+      console.log("User account data for address:", address);
+      console.log("", "totalLiquidityETH:          ", ethers.utils.formatEther(userAccountData.totalLiquidityETH), "ETH");
+      console.log("", "totalCollateralETH:         ", ethers.utils.formatEther(userAccountData.totalCollateralETH), "ETH");
+      console.log("", "totalBorrowsETH:            ", ethers.utils.formatEther(userAccountData.totalBorrowsETH), "ETH");
+      console.log("", "totalFeesETH:               ", ethers.utils.formatEther(userAccountData.totalFeesETH), "ETH");
+      console.log("", "availableBorrowsETH:        ", ethers.utils.formatEther(userAccountData.availableBorrowsETH), "ETH");
+      console.log("", "currentLiquidationThreshold:", ethers.utils.formatEther(userAccountData.currentLiquidationThreshold), "ETH");
+      console.log("", "ltv:                        ", userAccountData.ltv.toString()), "%";
+      console.log("", "healthFactor:               ", ethers.utils.formatEther(userAccountData.healthFactor), "ETH");
+  } catch (e) {
+    console.log("☢️ Error:", e)
+  }
+  return "";
+}
+
+task("aaveV1AccountHealth", "Fetch account health for account")
+  .addPositionalParam("address", "Address to fetch account health for")
+  .setAction(async (taskArgs, { network, ethers }) => {
+    addressProviderABI = require("./contracts/external_abi/aave_v1/LendingPoolAddressesProvider.json");
+    lendingPool = require("./contracts/external_abi/aave_v1/LendingPool.json");
+    provider = ethers.getDefaultProvider();
+
+    // this is mainnet address
+    addressProvider = new ethers.Contract("0x24a42fD28C976A61Df5D00D0599C34c4f90748c8", addressProviderABI, provider);
+    lendingPool = new ethers.Contract(await addressProvider.getLendingPool(), lendingPool, provider);
+
+    await FetchAndLogAccountHealth(lendingPool, taskArgs.address);
+  })
+
+task("aaveV1DepositETH", "Deposit some ETH as collateral to Aave V1")
+  .addPositionalParam("address", "Address to deposit from")
+  .setAction(async (taskArgs, { network, ethers }) => {
+    addressProviderABI = require("./contracts/external_abi/aave_v1/LendingPoolAddressesProvider.json");
+    lendingPoolABI = require("./contracts/external_abi/aave_v1/LendingPool.json");
+    provider = await ethers.getDefaultProvider();
+
+    const fromSigner = await ethers.provider.getSigner(taskArgs.address);
+
+    // this is mainnet address
+    addressProvider = new ethers.Contract("0x24a42fD28C976A61Df5D00D0599C34c4f90748c8", addressProviderABI, provider);
+    lendingPool = new ethers.Contract(await addressProvider.getLendingPool(), lendingPoolABI, fromSigner);
+
+    let startBalance = await fromSigner.getBalance();
+    console.log("")
+    console.log("starting balance:", ethers.utils.formatEther(startBalance), "ETH");
+    console.log("Account Health Before Deposit")
+    await FetchAndLogAccountHealth(lendingPool, taskArgs.address);
+    console.log("")
+
+    /*
+     * Deposit collateral to V1
+     */
+    let depositAmount = ethers.utils.parseEther("100.0");
+    console.log("Aave V1 deposit transaction:")
+    let tx = await lendingPool.deposit(
+      "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+      depositAmount,
+      0,
+      {value: depositAmount}
+      );
+    console.log(tx);
+
+    let endBalance = await fromSigner.getBalance();
+    console.log("")
+    console.log("ending balance:", ethers.utils.formatEther(endBalance), "ETH");
+    console.log("Account Health After Deposit")
+    await FetchAndLogAccountHealth(lendingPool, taskArgs.address);
+    console.log("")
+  })
+
+task("aaveV1DepositETHBorrowDAI", "[Aave V1]Deposit some ETH as collateral then borrow DAI")
+  .addPositionalParam("address", "Address to deposit from")
+  .setAction(async (taskArgs, { network, ethers }) => {
+    addressProviderABI = require("./contracts/external_abi/aave_v1/LendingPoolAddressesProvider.json");
+    lendingPoolABI = require("./contracts/external_abi/aave_v1/LendingPool.json");
+    erc20ABI = require("./contracts/external_abi/common/erc20.json")
+    provider = await ethers.getDefaultProvider();
+
+    const fromSigner = await ethers.provider.getSigner(taskArgs.address);
+
+    // load contracts
+    addressProvider = new ethers.Contract("0x24a42fD28C976A61Df5D00D0599C34c4f90748c8", addressProviderABI, provider);
+    lendingPool = new ethers.Contract(await addressProvider.getLendingPool(), lendingPoolABI, fromSigner);
+    daiAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+    daiERC20 = new ethers.Contract(daiAddress, erc20ABI, fromSigner);
+
+    console.log("")
+    let startBalanceETH = await fromSigner.getBalance();
+    console.log("starting balance:", ethers.utils.formatEther(startBalanceETH), "ETH");
+    let startBalanceDAI = await daiERC20.balanceOf(taskArgs.address);
+    console.log("starting balance:", ethers.utils.formatEther(startBalanceDAI), "DAI");
+    console.log("Account Health Before Deposit")
+    await FetchAndLogAccountHealth(lendingPool, taskArgs.address);
+    console.log("")
+
+    // Deposit collateral to V1
+    let depositAmount = ethers.utils.parseEther("100.0");
+    console.log("Aave V1 deposit transaction:")
+    let tx = await lendingPool.deposit(
+      "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+      depositAmount,
+      0,
+      {value: depositAmount}
+      );
+    console.log(tx);
+    console.log("")
+
+    // take out a DAI borrow Deposit collateral to V1
+    let borrowAmount = ethers.utils.parseEther("65000.0"); // should be about 75% ltv
+    console.log("Aave V1 borrow DAI transaction:");
+    tx = await lendingPool.borrow(
+      daiAddress,
+      borrowAmount,
+      2, // 1: stable rate, 2: variable rate
+      0,
+    );
+    console.log(tx);
+
+    console.log("");
+    let endBalanceETH = await fromSigner.getBalance();
+    console.log("ending balance:", ethers.utils.formatEther(endBalanceETH), "ETH");
+    let endBalanceDAI = await daiERC20.balanceOf(taskArgs.address);
+    console.log("ending balance:", ethers.utils.formatEther(endBalanceDAI), "DAI");
+    console.log("Account Health After Deposit");
+    await FetchAndLogAccountHealth(lendingPool, taskArgs.address);
+  })
