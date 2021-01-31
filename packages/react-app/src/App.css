@@ -183,7 +183,6 @@ font-size: 1.15em;
 .ratematrix{
   font-family: sans-serif;
   color:white;
-  padding-top: 50px;
   padding-bottom: 50px;
   width: 75%;
   margin: 0 auto;
@@ -197,7 +196,8 @@ font-size: 1.15em;
 }
 
 .rateentry{
-  width: 50%;
+  width: 10%;
+  float: right;
   display: inline-block;
 }
 

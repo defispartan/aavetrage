@@ -15,6 +15,7 @@
     ]
   },
   "dependencies": {
+    "@aave/protocol-js": "^2.3.1",
     "@ant-design/icons": "^4.2.2",
     "@apollo/react-hooks": "^4.0.0",
     "@ethersproject/address": "^5.0.5",
@@ -39,6 +40,7 @@
     "burner-provider": "^1.0.38",
     "dotenv": "^8.2.0",
     "eth-hooks": "^1.1.2",
+    "ethers": "^5.0.26",
     "graphiql": "^1.0.5",
     "graphql": "^15.3.0",
     "isomorphic-fetch": "^3.0.0",

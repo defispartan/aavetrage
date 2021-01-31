@@ -55,6 +55,8 @@
     ]
   },
   "dependencies": {
+    "@apollo/client": "^3.3.7",
+    "graphql": "^15.5.0",
     "reactstrap": "^8.9.0"
   }
 }
