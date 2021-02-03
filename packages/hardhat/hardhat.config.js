@@ -403,10 +403,11 @@ task("aaveV1LoadLendingPoolAddress", "Fetch AaveV1 LendingPool Mainnet Address")
   })
 
 
-async function FetchAndLogAccountHealth(lendingPool, address) {
+async function FetchAndLogAaveV1AccountHealth(lendingPool, address) {
   try {
       userAccountData = await lendingPool.getUserAccountData(address);
-      console.log("User account data for address:", address);
+      console.log("==========================================================")
+      console.log("Aave V1 account data for address:", address);
       console.log("", "totalLiquidityETH:          ", ethers.utils.formatEther(userAccountData.totalLiquidityETH), "ETH");
       console.log("", "totalCollateralETH:         ", ethers.utils.formatEther(userAccountData.totalCollateralETH), "ETH");
       console.log("", "totalBorrowsETH:            ", ethers.utils.formatEther(userAccountData.totalBorrowsETH), "ETH");
@@ -415,75 +416,21 @@ async function FetchAndLogAccountHealth(lendingPool, address) {
       console.log("", "currentLiquidationThreshold:", ethers.utils.formatEther(userAccountData.currentLiquidationThreshold), "ETH");
       console.log("", "ltv:                        ", userAccountData.ltv.toString()), "%";
       console.log("", "healthFactor:               ", ethers.utils.formatEther(userAccountData.healthFactor), "ETH");
+      console.log("==========================================================")
   } catch (e) {
     console.log("☢️ Error:", e)
   }
   return "";
 }
 
-task("aaveV1AccountHealth", "Fetch account health for account")
-  .addPositionalParam("address", "Address to fetch account health for")
-  .setAction(async (taskArgs, { network, ethers }) => {
-    addressProviderABI = require("./contracts/external_abi/aave_v1/LendingPoolAddressesProvider.json");
-    lendingPool = require("./contracts/external_abi/aave_v1/LendingPool.json");
-    provider = ethers.getDefaultProvider();
-
-    // this is mainnet address
-    addressProvider = new ethers.Contract("0x24a42fD28C976A61Df5D00D0599C34c4f90748c8", addressProviderABI, provider);
-    lendingPool = new ethers.Contract(await addressProvider.getLendingPool(), lendingPool, provider);
-
-    await FetchAndLogAccountHealth(lendingPool, taskArgs.address);
-  })
-
-task("aaveV1DepositETH", "Deposit some ETH as collateral to Aave V1")
-  .addPositionalParam("address", "Address to deposit from")
-  .setAction(async (taskArgs, { network, ethers }) => {
-    addressProviderABI = require("./contracts/external_abi/aave_v1/LendingPoolAddressesProvider.json");
-    lendingPoolABI = require("./contracts/external_abi/aave_v1/LendingPool.json");
-    provider = await ethers.getDefaultProvider();
-
-    const fromSigner = await ethers.provider.getSigner(taskArgs.address);
-
-    // this is mainnet address
-    addressProvider = new ethers.Contract("0x24a42fD28C976A61Df5D00D0599C34c4f90748c8", addressProviderABI, provider);
-    lendingPool = new ethers.Contract(await addressProvider.getLendingPool(), lendingPoolABI, fromSigner);
-
-    let startBalance = await fromSigner.getBalance();
-    console.log("")
-    console.log("starting balance:", ethers.utils.formatEther(startBalance), "ETH");
-    console.log("Account Health Before Deposit")
-    await FetchAndLogAccountHealth(lendingPool, taskArgs.address);
-    console.log("")
-
-    /*
-     * Deposit collateral to V1
-     */
-    let depositAmount = ethers.utils.parseEther("100.0");
-    console.log("Aave V1 deposit transaction:")
-    let tx = await lendingPool.deposit(
-      "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
-      depositAmount,
-      0,
-      {value: depositAmount}
-      );
-    console.log(tx);
-
-    let endBalance = await fromSigner.getBalance();
-    console.log("")
-    console.log("ending balance:", ethers.utils.formatEther(endBalance), "ETH");
-    console.log("Account Health After Deposit")
-    await FetchAndLogAccountHealth(lendingPool, taskArgs.address);
-    console.log("")
-  })
-
 task("aaveV1DepositETHBorrowDAI", "[Aave V1]Deposit some ETH as collateral then borrow DAI")
   .addPositionalParam("address", "Address to deposit from")
   .setAction(async (taskArgs, { network, ethers }) => {
     addressProviderABI = require("./contracts/external_abi/aave_v1/LendingPoolAddressesProvider.json");
     lendingPoolABI = require("./contracts/external_abi/aave_v1/LendingPool.json");
-    erc20ABI = require("./contracts/external_abi/common/erc20.json")
-    provider = await ethers.getDefaultProvider();
+    erc20ABI = require("./contracts/external_abi/common/erc20.json");
 
+    const provider = await ethers.getDefaultProvider();
     const fromSigner = await ethers.provider.getSigner(taskArgs.address);
 
     // load contracts
@@ -498,7 +445,7 @@ task("aaveV1DepositETHBorrowDAI", "[Aave V1]Deposit some ETH as collateral then 
     let startBalanceDAI = await daiERC20.balanceOf(taskArgs.address);
     console.log("starting balance:", ethers.utils.formatEther(startBalanceDAI), "DAI");
     console.log("Account Health Before Deposit")
-    await FetchAndLogAccountHealth(lendingPool, taskArgs.address);
+    await FetchAndLogAaveV1AccountHealth(lendingPool, taskArgs.address);
     console.log("")
 
     // Deposit collateral to V1
@@ -530,5 +477,91 @@ task("aaveV1DepositETHBorrowDAI", "[Aave V1]Deposit some ETH as collateral then 
     let endBalanceDAI = await daiERC20.balanceOf(taskArgs.address);
     console.log("ending balance:", ethers.utils.formatEther(endBalanceDAI), "DAI");
     console.log("Account Health After Deposit");
-    await FetchAndLogAccountHealth(lendingPool, taskArgs.address);
+    await FetchAndLogAaveV1AccountHealth(lendingPool, taskArgs.address);
+  })
+
+async function FetchAndLogAaveV2AccountHealth(lendingPool, address) {
+  try {
+      userAccountData = await lendingPool.getUserAccountData(address);
+      console.log("==========================================================")
+      console.log("Aave V2 account data for address:", address);
+      console.log("", "totalCollateralETH:         ", ethers.utils.formatEther(userAccountData.totalCollateralETH), "ETH");
+      console.log("", "totalDebtETH:               ", ethers.utils.formatEther(userAccountData.totalDebtETH), "ETH");
+      console.log("", "availableBorrowsETH:        ", ethers.utils.formatEther(userAccountData.availableBorrowsETH), "ETH");
+      console.log("", "currentLiquidationThreshold:", ethers.utils.formatEther(userAccountData.currentLiquidationThreshold), "ETH");
+      console.log("", "ltv:                        ", userAccountData.ltv.toString()), "%";
+      console.log("", "healthFactor:               ", ethers.utils.formatEther(userAccountData.healthFactor));
+      console.log("==========================================================")
+  } catch (e) {
+    console.log("☢️ Error:", e)
+  }
+  return "";
+}
+
+task("aavetrageV2LeverageBorrow", "[Aavetrage] Perform leveraged borrow on Aave v2")
+  .addPositionalParam("address", "Address to deposit from")
+  .setAction(async (taskArgs, { network, ethers }) => {
+    erc20ABI = require("./contracts/external_abi/common/erc20.json");
+    wethABI = require("./contracts/external_abi/common/WETH9.json");
+    stableDebtTokenABI = require("./contracts/external_abi/aave_v2/StableDebtToken.json");
+    v2AddressProviderABI = require("./contracts/external_abi/aave_v2/LendingPoolAddressesProvider.json");
+    v2LendingPoolABI = require("./contracts/external_abi/aave_v2/LendingPool.json");
+    priceOracleABI = require("./contracts/external_abi/aave_v2/AaveOracle.json");
+
+    v1AaveAddressProviderAddress = "0x24a42fD28C976A61Df5D00D0599C34c4f90748c8";
+    v2AaveAddressProviderAddress = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5";
+    daiAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+    wethAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+
+    const provider = await ethers.getDefaultProvider();
+    const fromSigner = await ethers.provider.getSigner(taskArgs.address);
+
+    const Aavetrage = await ethers.getContractFactory("Aavetrage");
+    const aavetrage = await Aavetrage.deploy(v1AaveAddressProviderAddress, v2AaveAddressProviderAddress);
+
+    const v2AddressProvider = new ethers.Contract(v2AaveAddressProviderAddress, v2AddressProviderABI, provider);
+    const v2LendingPoolAddress = await v2AddressProvider.getLendingPool();
+    const v2LendingPool = new ethers.Contract(v2LendingPoolAddress, v2LendingPoolABI, fromSigner);
+    const priceOracleAddress = await v2AddressProvider.getPriceOracle();
+    const priceOracle = new ethers.Contract(priceOracleAddress, priceOracleABI, provider);
+
+    const wethERC20 = new ethers.Contract(wethAddress, wethABI, fromSigner);
+    const daiERC20 = new ethers.Contract(daiAddress, erc20ABI, fromSigner);
+
+    const wethToGet = ethers.utils.parseEther("100.0");
+    await wethERC20.deposit({value: wethToGet});
+
+    // need to allow aavetrage allowance on all tokens
+    await wethERC20.approve(aavetrage.address, ethers.constants.MaxUint256)
+    await wethERC20.approve(v2LendingPoolAddress, ethers.constants.MaxUint256)
+    await daiERC20.approve(aavetrage.address, ethers.constants.MaxUint256)
+    await daiERC20.approve(v2LendingPoolAddress, ethers.constants.MaxUint256)
+
+    // need to allow aavetrage 
+    const reserveData = await v2LendingPool.getReserveData(daiAddress);
+    // console.log(reserveData);
+    const daiPriceWei = await priceOracle.getAssetPrice(daiAddress);
+
+    const stableDebtToken = new ethers.Contract(reserveData["stableDebtTokenAddress"], stableDebtTokenABI, fromSigner);
+
+    const ethToCollateralize = ethers.utils.parseEther("1.0");
+    const daiToBorrow = ethers.utils.parseEther("1000.0");
+    await stableDebtToken.approveDelegation(aavetrage.address, daiToBorrow);
+
+    // leveraged borrow: weth collateral, dai borrow
+    await FetchAndLogAaveV2AccountHealth(v2LendingPool, taskArgs.address);
+    console.log("");
+
+    console.log("calling aavetrage.leveragedDepositV2(wethAddress, %s, daiAddress, %s)", ethToCollateralize.toString(), daiToBorrow.toString());
+    console.log("depositing %s ETH as collateral", ethers.utils.formatEther(ethToCollateralize));
+    console.log("borrowing and re-depositing %s DAI", ethers.utils.formatEther(daiToBorrow));
+    console.log("current DAI price: %s ETH", ethers.utils.formatEther(daiPriceWei));
+    tx = await aavetrage.AaveV2LeveragedDeposit(
+      wethAddress, ethToCollateralize,
+      daiAddress, daiToBorrow,
+      1
+    )
+
+    console.log("");
+    await FetchAndLogAaveV2AccountHealth(v2LendingPool, taskArgs.address);
   })

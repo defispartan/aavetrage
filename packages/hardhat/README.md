@@ -26,7 +26,7 @@ almost impossible. So dev is a bit more efficient by doing hardhat tasks instead
 (maybe i should just read the docs and figure out how to run individual tests)
 
 
-Example using ethers.js to deposit some collateral (ETH) and take out a borrow (DAI).
+### Example using hardhat to deposit some collateral (ETH) and take out a borrow (DAI).
 ```
 $ npx hardhat aaveV1DepositETHBorrowDAI 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
@@ -98,4 +98,37 @@ User account data for address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
  currentLiquidationThreshold: 0.00000000000000008 ETH
  ltv:                         75
  healthFactor:                1.67781435389127675 ETH
+```
+
+### Example using hardhat to do a leveraged borrow (ETH as collateral, DAI as borrow)
+
+This exact pairing is probably not very productive, but it shows the workflow.
+
+```
+$ npx hardhat aavetrageV2LeverageBorrow 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+
+==========================================================
+Aave V2 account data for address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+ totalCollateralETH:          0.0 ETH
+ totalDebtETH:                0.0 ETH
+ availableBorrowsETH:         0.0 ETH
+ currentLiquidationThreshold: 0.0 ETH
+ ltv:                         0
+ healthFactor:                115792089237316195423570985008687907853269984665640564039457.584007913129639935
+==========================================================
+
+calling aavetrage.leveragedDepositV2(wethAddress, 1000000000000000000, daiAddress, 1000000000000000000000)
+depositing 1.0 ETH as collateral
+borrowing and re-depositing 1000.0 DAI
+current DAI price: 0.000654013858756602 ETH
+
+==========================================================
+Aave V2 account data for address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+ totalCollateralETH:          1.733555 ETH
+ totalDebtETH:                0.733555 ETH
+ availableBorrowsETH:         0.616537634 ETH
+ currentLiquidationThreshold: 0.000000000000008144 ETH
+ ltv:                         7788
+ healthFactor:                1.924609868380694017
+==========================================================
 ```
