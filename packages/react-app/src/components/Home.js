@@ -175,8 +175,8 @@ const Home = () => {
 
 
                 </div>
-                <div className="col-two profit">{bestDeposit[2] - bestBorrow[2]} % Difference</div>
-                <div className="col-two profit">{ops[1][0] - ops[1][2]} % Difference <a href="/about"><img src={Boost} className="boost"></img></a></div>
+                <div className="col-two profit">{round(bestDeposit[2] - bestBorrow[2], 2)} % Difference</div>
+                <div className="col-two profit">{round(ops[1][0] - ops[1][2], 2)} % Difference <a href="/about"><img src={Boost} className="boost"></img></a></div>
                 <div className="tableheader">Stablecoin Rates</div>
             </div>)
         }

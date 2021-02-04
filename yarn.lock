@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@aave/protocol-js@^2.3.1":
-  version "2.3.1"
-  resolved "https://registry.yarnpkg.com/@aave/protocol-js/-/protocol-js-2.3.1.tgz#5c9462953e203b1995a9d0713c6ecd9ceb688422"
-  integrity sha512-uqrydSEHbK42UpIr9kKMamd4SQPp017tkDNtWKcMzERBTJvjbfuCrBn0p4/bi9HUhpCVrhIJf3EZaAVX41neCg==
+"@aave/protocol-js@^2.4.0":
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/@aave/protocol-js/-/protocol-js-2.4.0.tgz#8f14ad43f24e389c7d3aec67bca37ad62e967473"
+  integrity sha512-wvzhG/w08RCpKtJq07qA47DLtdw/x2XstZZRbumhvuZPIBgdWq5yf/FKjXjdHwSdXIoBkxFprmFhSrz+mKe/mw==
   dependencies:
     axios "^0.21.0"
     bignumber.js "^9.0.1"

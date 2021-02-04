@@ -17,7 +17,7 @@
 import Home from "./Home.js";
 import About from "./About.js";
 import Portfolio from "./Portfolio.js";
-import Scaffold from "./Scaffold.js"
+//import Scaffold from "./Scaffold.js"
 
 
 
@@ -38,11 +38,7 @@ var routes = [
         name: "About",
         component: About,
     },
-    {
-        path: "/develop",
-        name: "Development",
-        component: Scaffold,
-    }
+
 
 
 ];

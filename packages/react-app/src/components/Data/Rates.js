@@ -1,7 +1,6 @@
-import { ApolloClient } from "apollo-client";
-import { InMemoryCache } from "apollo-cache-inmemory";
-import { HttpLink } from "apollo-link-http";
-import { RESERVES } from './Query.js'
+import { aavev1client } from "./aavev1client.js"
+import { aavev2client } from "./aavev2client.js"
+import { V1_RESERVES, V2_RESERVES } from './Query.js'
 
 const setOps = (opsArray, element) => {
     let borrow = round(parseRay(element.variableBorrowRate), 2)
@@ -31,39 +30,15 @@ export async function getRates() {
 
 
 
-    const v1client = new ApolloClient({
-        // By default, this client will send queries to the
-        //  `/graphql` endpoint on the same host
-        // Pass the configuration option { uri: YOUR_GRAPHQL_API_URL } to the `HttpLink` to connect
-        // to a different host
-        link: new HttpLink({
-            // pending uniswap with 'fixed' trade volumne
-            uri: "https://api.thegraph.com/subgraphs/name/aave/protocol-multy-raw",
-        }),
-        cache: new InMemoryCache(),
-    });
-    const v2client = new ApolloClient({
-        // By default, this client will send queries to the
-        //  `/graphql` endpoint on the same host
-        // Pass the configuration option { uri: YOUR_GRAPHQL_API_URL } to the `HttpLink` to connect
-        // to a different host
-        link: new HttpLink({
-            // pending uniswap with 'fixed' trade volumne
-            uri: "https://api.thegraph.com/subgraphs/name/aave/protocol-v2",
-        }),
-        cache: new InMemoryCache(),
-    });
-
-
 
     try {
-        const v1Reserves = await v1client.query({
-            query: RESERVES,
+        const v1Reserves = await aavev1client.query({
+            query: V1_RESERVES,
             fetchPolicy: "cache-first",
         });
 
-        const v2Reserves = await v2client.query({
-            query: RESERVES,
+        const v2Reserves = await aavev2client.query({
+            query: V2_RESERVES,
             fetchPolicy: "cache-first",
         });
         const v1Data = v1Reserves.data.reserves

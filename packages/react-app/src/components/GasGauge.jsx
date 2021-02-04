@@ -11,7 +11,7 @@ export default function GasGauge(props) {
       shape="round"
     >
       <span style={{ marginRight: 8 }}><span role="img" aria-label="fuelpump">⛽️</span></span>
-      {parseInt(props.gasPrice, 10) / 10 ** 9}g
+      {parseInt(props.gasPrice, 10) / 10 ** 9} gwei
     </Button>
   );
 }
