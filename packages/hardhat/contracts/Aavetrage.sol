@@ -1,5 +1,18 @@
 pragma solidity 0.8.0;
 
+// import "hardhat/console.sol";
+
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
+    function balanceOf(address account) external view returns (uint256);
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
 interface IAaveV1AddressProvider {
     function getLendingPool() external view returns (address);
 }
@@ -20,6 +33,8 @@ interface IAaveV2LendingPool {
     function withdraw(address asset, uint256 amount, address to) external;
     function borrow(address asset, uint256 amount, uint256 interestRateMode, uint16 referralCode, address onBehalfOf) external;
     function repay(address asset, uint256 amount, uint256 rateMode, address onBehalfOf) external;
+    function flashLoan(address receiverAddress, address[] calldata assets, uint256[] calldata amounts, uint256[] calldata modes, address onBehalfOf, bytes calldata params, uint16 referralCode) external;
+    function getUserAccountData(address user) external;
 }
 
 contract Aavetrage {
@@ -27,6 +42,7 @@ contract Aavetrage {
     IAaveV1AddressProvider public aaveV1AddressProvider;
     IAaveV2AddressProvider public aaveV2AddressProvider;
 
+    event UserLTV(address user, uint256 ltv);
 
     constructor(
         address _v1AddressProvider,
@@ -36,23 +52,22 @@ contract Aavetrage {
         aaveV2AddressProvider = IAaveV2AddressProvider(_v2AddressProvider);
     }
 
-    /**
-    assumes user is properly approved for each token and already has sufficient collateral on V1.
-    */
-    function borrowAaveV1DepositV2(
-        address v1TokenAddress, uint256 v1TokenAmount, uint256 v1InterestRateMode, uint16 v1ReferralCode,
-        address v2TokenAddress, uint256 v2TokenAmount, uint256 v2InterestRateMode, uint16 v2ReferralCode)
-        public
-    {
 
-        IAaveV1LendingPool v1LendingPool = IAaveV1LendingPool(aaveV1AddressProvider.getLendingPool());
+    function AaveV2LeveragedDeposit(
+        address collateralAddress, uint256 collateralAmount, address borrowAddress, uint256 borrowAmount, uint256 loops
+    ) public {
+
         IAaveV2LendingPool v2LendingPool = IAaveV2LendingPool(aaveV2AddressProvider.getLendingPool());
+        require(IERC20(collateralAddress).transferFrom(msg.sender, address(this), collateralAmount), "failed to transfer collateral to contract");
 
-        // borrow on v1 and deposit to v2
-        // note: this doesnt work, since when we call v1.borrow, this contract is msg.sender
-        v1LendingPool.borrow(v1TokenAddress, v1TokenAmount, v1InterestRateMode, v1ReferralCode);
-        v2LendingPool.deposit(v2TokenAddress, v2TokenAmount, msg.sender, v2ReferralCode);
+        IERC20(collateralAddress).approve(address(v2LendingPool), collateralAmount);
+        v2LendingPool.deposit(collateralAddress, collateralAmount, msg.sender, 0);
 
-        return;
+        IERC20(borrowAddress).approve(address(v2LendingPool), borrowAmount*loops);
+        // is there ever a reason to actually do the loop? I think this can be just raw values
+        for (uint i = 0; i < loops; i++) {
+            v2LendingPool.borrow(borrowAddress, borrowAmount, 1, 0, msg.sender);
+            v2LendingPool.deposit(borrowAddress, borrowAmount, msg.sender, 0);
+        }
     }
 }
