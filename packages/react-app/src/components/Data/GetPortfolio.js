@@ -5,16 +5,6 @@ import { V1_RESERVES, V2_RESERVES, V1_USER_RESERVES, V2_USER_RESERVES } from './
 import { v1, v2 } from '@aave/protocol-js';
 
 
-
-const parseRay = (input) => {
-    return input / 10000000000000000000000000
-}
-
-const round = (value, decimals) => {
-    return Number(Math.round(value + "e" + decimals) + "e-" + decimals);
-}
-
-
 export async function getPortfolio(address, ethPrice) {
     let lowerAddress = address.toLowerCase()
     try {
@@ -48,20 +38,12 @@ export async function getPortfolio(address, ethPrice) {
             fetchPolicy: "cache-first",
         });
 
-        console.log("RESERVES")
-        console.log(v1Reserves)
-        console.log("USER RESERVES")
-        console.log(v1UserReserves)
-        console.log("ADDRESS")
-        console.log(lowerAddress)
-        console.log("ETH Price")
-        console.log(ethPrice)
+        let usdPriceEth = (1 / ethPrice) * 1000000000000000000
 
 
-        let v1UserSummary = v1.formatUserSummaryData(v1Reserves.data.reserves, v1UserReserves.data.userReserves, lowerAddress, ethPrice, Date.now())
-        let v2UserSummary = v2.formatUserSummaryData(v2Reserves.data.reserves, v2UserReserves.data.userReserves, lowerAddress, ethPrice, Date.now())
-        console.log("V1 USER SUMMARY")
-        console.log(v1UserSummary)
+        let v1UserSummary = v1.formatUserSummaryData(v1Reserves.data.reserves, v1UserReserves.data.userReserves, lowerAddress, usdPriceEth, Math.floor(Date.now() / 1000))
+        let v2UserSummary = v2.formatUserSummaryData(v2Reserves.data.reserves, v2UserReserves.data.userReserves, lowerAddress, usdPriceEth, Math.floor(Date.now() / 1000))
+        return ([v1UserSummary, v2UserSummary])
     }
     catch (error) {
         let errorMessage = ""

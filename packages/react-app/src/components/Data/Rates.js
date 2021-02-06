@@ -4,6 +4,9 @@ import { V1_RESERVES, V2_RESERVES } from './Query.js'
 
 const setOps = (opsArray, element) => {
     let borrow = round(parseRay(element.variableBorrowRate), 2)
+    let stableborrow = round(parseRay(element.stableBorrowRate), 2)
+    console.log(element)
+    console.log(stableborrow)
     let deposit = round(parseRay(element.liquidityRate), 2)
     if (deposit > opsArray[0]) {
         opsArray[0] = deposit
@@ -12,6 +15,10 @@ const setOps = (opsArray, element) => {
     if (borrow < opsArray[2]) {
         opsArray[2] = borrow
         opsArray[3] = element.symbol
+    }
+    if (stableborrow < opsArray[4] && stableborrow > 0) {
+        opsArray[4] = stableborrow
+        opsArray[5] = element.symbol
     }
 }
 
@@ -44,8 +51,8 @@ export async function getRates() {
         const v1Data = v1Reserves.data.reserves
         const v2Data = v2Reserves.data.reserves
         let reserveObj = { "usdc": [[], []], "usdt": [[], []], "dai": [[], []], "tusd": [[], []], "susd": [[], []], "busd": [[], []], "gusd": [[0, 0, 0], []] }
-        let v1ops = [0.00, "na", 100.00, "na"]
-        let v2ops = [0.00, "na", 100.00, "na"]
+        let v1ops = [0.00, "na", 100.00, "na", 100.00, "na"]
+        let v2ops = [0.00, "na", 100.00, "na", 100.00, "na"]
         v1Data.forEach(element => {
             if (element.symbol === "USDC") {
                 reserveObj["usdc"][0] = getAppend(element)

@@ -57,7 +57,13 @@ const localProviderUrlFromEnv = process.env.REACT_APP_PROVIDER ? process.env.REA
 if (DEBUG) console.log("🏠 Connecting to provider:", localProviderUrlFromEnv);
 const localProvider = new JsonRpcProvider(localProviderUrlFromEnv);
 
+const round = (value, decimals) => {
+    return Number(Math.round(value + "e" + decimals) + "e-" + decimals);
+}
 
+const numberWithCommas = (x) => {
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
 
 function Portfolio(props) {
     const [injectedProvider, setInjectedProvider] = useState(null);
@@ -71,6 +77,7 @@ function Portfolio(props) {
     const [portfolioData, setPortfolioData] = useState(null)
     const [aavetrageBorrowSelect, setaavetrageBorrowSelect] = useState(null)
     const [aavetrageDepositSelect, setaavetrageDepositSelect] = useState(null)
+
 
     /* 💵 this hook will get the price of ETH from 🦄 Uniswap: */
     const price = useExchangePrice(mainnetProvider); //1 for xdai
@@ -135,6 +142,13 @@ function Portfolio(props) {
         setInjectedProvider(new Web3Provider(provider));
     }, [setInjectedProvider]);
 
+
+    const fetchPortfolioData = async () => {
+        let port = await getPortfolio(injectedProvider.provider.selectedAddress, price);
+        console.log(port)
+        setPortfolioData(port)
+        setPortfolioLoaded(true)
+    }
     useEffect(() => {
         if (web3Modal.cachedProvider) {
             loadWeb3Modal();
@@ -144,9 +158,7 @@ function Portfolio(props) {
 
     useEffect(() => {
         if (injectedProvider !== null && price > 0) {
-            let port = getPortfolio(injectedProvider.provider.selectedAddress, price);
-
-            setPortfolioLoaded(true)
+            fetchPortfolioData()
         }
     }, [injectedProvider, price])
 
@@ -352,12 +364,12 @@ function Portfolio(props) {
                 <CardBody>
                     <h4 className="actionHeader">Select Borrow</h4>
                     <div style={{ display: "inline-block" }}>
-                        <p style={{ display: "inline-block", color: "white", paddingRight: "30px" }}>Stable Rate<div className="box pink"></div>
-                        </p>
-                        <p style={{ display: "inline-block", color: "white" }}>
+                        <div style={{ display: "inline-block", color: "white", paddingRight: "30px" }}>Stable Rate<div className="box pink"></div>
+                        </div>
+                        <div style={{ display: "inline-block", color: "white" }}>
 
                             Variable Rate<div className="box blue"></div>
-                        </p>
+                        </div>
                     </div>
                     {displayBorrowRow()}
                     {displayDepositRow()}
@@ -418,6 +430,202 @@ function Portfolio(props) {
         }
     }
 
+    const calcTotalBalance = () => {
+        let total = (portfolioData[0].totalCollateralUSD - portfolioData[0].totalBorrowsUSD) + (portfolioData[1].totalCollateralUSD - portfolioData[1].totalBorrowsUSD)
+        return ("$" + numberWithCommas(round(total, 2)))
+    }
+
+    const calcBorrowPercent = (market) => {
+        let percent = "0"
+        if (market === "v1") {
+            let avail = parseFloat(portfolioData[0].availableBorrowsETH)
+            let used = parseFloat(portfolioData[0].totalBorrowsETH)
+            if (avail + used !== 0) {
+                percent = round((used / (avail + used) * 100), 0)
+            }
+        }
+        else if (market === "v2") {
+            let avail = parseFloat(portfolioData[1].availableBorrowsETH)
+            let used = parseFloat(portfolioData[1].totalBorrowsETH)
+            if (avail + used !== 0) {
+                percent = round((used / (avail + used) * 100), 0)
+            }
+        }
+        return percent
+    }
+
+    const splitReserves = (reserves) => {
+        let deposits = []
+        let borrows = []
+        reserves.forEach(entry => {
+            if (entry.principalATokenBalance > 0) {
+                deposits.push(entry)
+            }
+            else {
+                borrows.push(entry)
+            }
+        })
+        return [deposits, borrows]
+    }
+
+    const displayV2Table = () => {
+        let split = splitReserves(portfolioData[1].reservesData)
+        console.log("v2 PLIT")
+        console.log(split)
+        let deposits = split[0]
+        let borrows = split[1]
+        let numRow = Math.max(deposits.length, borrows.length)
+        let rowCount = 0
+        let rows = []
+        while (rowCount < numRow) {
+            if (rowCount < deposits.length && rowCount < borrows.length) {
+                rows.push(['1000 USDC', '14% Variable', '$100000', '590000 DAI', '7.2% stable', '$500000'])
+            }
+            else if (rowCount < deposits.length && rowCount >= borrows.length) {
+                rows.push(['1000 USDC', '14% Variable', '$100000', '-', '-', '-'])
+            }
+            else if (rowCount >= deposits.length && rowCount < borrows.length) {
+                rows.push(['-', '-', '-', '590000 DAI', '7.2% stable', '$500000'])
+            }
+
+            rowCount++
+        }
+        return (
+            <tbody>
+
+                {    rows.map(row => {
+                    return (<tr>
+                        <td>{row[0]}</td>
+                        <td>{row[1]}</td>
+                        <td>{row[2]}</td>
+                        <td>{row[3]}</td>
+                        <td>{row[4]}</td>
+                        <td>{row[5]}</td>
+                    </tr>)
+                })}
+            </tbody>
+        )
+    }
+
+    const displayV2Portfolio = () => {
+        return (
+            <div className="ratematrix">
+
+                <Card className="shadow marketcard">
+                    <CardHeader className="border-0" style={{ backgroundColor: '#333', borderColor: '#333' }}>
+                        <h3 className="actionHeader">AAVE V2 Market</h3>
+                    </CardHeader>
+                    <Table className="align-items-center table-flush" style={{ marginBottom: "0px", backgroundColor: '#333', borderColor: '#333' }} bordered responsive>
+                        <thead>
+                            <tr>
+                                <th colSpan="3">Deposits</th>
+                                <th colSpan="3">Borrows</th>
+                            </tr>
+                            <tr>
+                                <th>Asset</th>
+                                <th>Interest Rate</th>
+                                <th>USD Value</th>
+                                <th>Asset</th>
+                                <th>Interest Rate</th>
+                                <th>USD Value</th>
+                            </tr>
+                        </thead>
+
+                        {displayV2Table()}
+
+                    </Table>
+                </Card>
+                <div className="actionbuttonrow">
+                    <Button className="actionbutton" onClick={() => { setAction('v2', 'Deposit') }}>Deposit</Button>
+                    <Button className="actionbutton" onClick={() => { setAction('v2', 'Withdraw') }}>Withdraw</Button>
+                    <Button className="actionbutton" onClick={() => { setAction('v2', 'Collateral Swap') }}> Collateral Swap</Button>
+                    <Button className="actionbutton" onClick={() => { setAction('v2', 'AAVEtrage') }} style={{ backgroundColor: '#B6509E', marginTop: '0px' }}>AAVEtrage</Button>
+                    <Button className="actionbutton" onClick={() => { setAction('v2', 'Borrow') }} >Borrow</Button>
+                    <Button className="actionbutton" onClick={() => { setAction('v2', 'Payback') }}>Payback</Button>
+                    <Button className="actionbutton" onClick={() => { setAction('v2', 'Debt Swap') }}>Debt Swap</Button>
+                </div>
+                {displayV2ActionPanel()}
+            </div>
+        )
+    }
+    const displayV1Table = () => {
+        let split = splitReserves(portfolioData[0].reservesData)
+        let deposits = split[0]
+        let borrows = split[1]
+        let numRow = Math.max(deposits.length, borrows.length)
+        console.log(numRow)
+        let rowCount = 0
+        let rows = []
+        while (rowCount < numRow) {
+            if (rowCount < deposits.length && rowCount < borrows.length) {
+                rows.push([round(deposits[rowCount].currentUnderlyingBalance, 4) + " " + deposits[rowCount].reserve.symbol, round((deposits[rowCount].reserve.liquidityRate * 100), 2) + "% " + deposits[rowCount].borrowRateMode, "$" + numberWithCommas(round(deposits[rowCount].currentUnderlyingBalanceUSD, 2)), round(borrows[rowCount].currentBorrows, 2) + " " + borrows[rowCount].reserve.symbol, round(borrows[rowCount].borrowRate * 100, 2) + "% " + borrows[rowCount].borrowRateMode, "$" + numberWithCommas(round(borrows[rowCount].currentBorrowsUSD, 2))])
+            }
+            else if (rowCount < deposits.length && rowCount >= borrows.length) {
+                rows.push([round(deposits[rowCount].currentUnderlyingBalance, 4) + " " + deposits[rowCount].reserve.symbol, round((deposits[rowCount].reserve.liquidityRate * 100), 2) + "% " + deposits[rowCount].borrowRateMode, "$" + numberWithCommas(round(deposits[rowCount].currentUnderlyingBalanceUSD, 2)), '', '', ''])
+            }
+            else if (rowCount >= deposits.length && rowCount < borrows.length) {
+                rows.push(['', '', '', round(borrows[rowCount].currentBorrows, 4) + " " + borrows[rowCount].reserve.symbol, round(borrows[rowCount].borrowRate * 100, 2) + "% " + borrows[rowCount].borrowRateMode, "$" + numberWithCommas(round(borrows[rowCount].currentBorrowsUSD, 2))])
+            }
+
+            rowCount++
+        }
+        return (
+            <tbody>
+
+                {    rows.map(row => {
+                    return (
+                        <tr>
+                            <td>{row[0]}</td>
+                            <td>{row[1]}</td>
+                            <td>{row[2]}</td>
+                            <td>{row[3]}</td>
+                            <td>{row[4]}</td>
+                            <td>{row[5]}</td>
+                        </tr>)
+                })}
+            </tbody>
+        )
+    }
+    const displayV1Portfolio = () => {
+        return (<div className="ratematrix">
+
+            <Card className="shadow marketcard">
+                <CardHeader className="border-0" style={{ backgroundColor: '#333', borderColor: '#333' }}>
+                    <h3 className="actionHeader">AAVE V1 Market</h3>
+                </CardHeader>
+                <Table className="align-items-center table-flush" style={{ marginBottom: "0px", backgroundColor: '#333', borderColor: '#333' }} bordered responsive>
+                    <thead>
+                        <tr>
+                            <th colSpan="3">Deposits</th>
+                            <th colSpan="3">Borrows</th>
+                        </tr>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Interest Rate</th>
+                            <th>USD Value</th>
+                            <th>Asset</th>
+                            <th>Interest Rate</th>
+                            <th>USD Value</th>
+                        </tr>
+                    </thead>
+
+                    {displayV1Table()}
+
+                </Table>
+            </Card>
+            <div className="actionbuttonrow">
+                <Button className="actionbutton" onClick={() => { setAction('v1', 'Deposit') }}>Deposit</Button>
+                <Button className="actionbutton" onClick={() => { setAction('v1', 'Withdraw') }}>Withdraw</Button>
+                <Button className="actionbutton" onClick={() => { setAction('v1', 'Collateral Swap') }}> Collateral Swap</Button>
+                <Button className="actionbutton" onClick={() => { setAction('v1', 'AAVEtrage') }} style={{ backgroundColor: '#B6509E', marginTop: '0px' }}>AAVEtrage</Button>
+                <Button className="actionbutton" onClick={() => { setAction('v1', 'Borrow') }} >Borrow</Button>
+                <Button className="actionbutton" onClick={() => { setAction('v1', 'Payback') }}>Payback</Button>
+                <Button className="actionbutton" onClick={() => { setAction('v1', 'Debt Swap') }}>Debt Swap</Button>
+            </div>
+            {displayV1ActionPanel()}
+        </div>)
+    }
+
     const displayPortfolio = () => {
         if (injectedProvider !== null) {
             if (portfolioLoaded === false) {
@@ -433,39 +641,39 @@ function Portfolio(props) {
                     <div className="asset">
 
                         <h3 className="portfolioheader">AAVE Portfolio Balance</h3>
-                        <h3 className="portfolioheader" style={{ fontFamily: 'Open Sans', paddingBottom: "50px" }}>$21,000,000.00</h3>
+                        <h3 className="portfolioheader" style={{ fontFamily: 'Open Sans', paddingBottom: "50px" }}>{calcTotalBalance()}</h3>
 
                         <div className="marketoverview">
 
                             <div className="marketheaderblock" style={{ paddingBottom: "75px" }}>
                                 <h4 style={{ color: 'white' }}>AAVE V1 Market</h4>
                                 <div className="marketheaderblock">
-                                    <p>Deposits</p>
-                                    <p style={{ fontFamily: 'Open Sans' }}>$10,000,000.00</p>
+                                    <h5 style={{ color: "white" }}>Deposits</h5>
+                                    <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[0].totalCollateralUSD, 2))}</h5>
                                 </div>
                                 <div className="marketheaderblock">
-                                    <p>Borrows</p>
-                                    <p style={{ fontFamily: 'Open Sans' }}>$5,000,000.00</p>
+                                    <h5 style={{ color: "white" }}>Borrows</h5>
+                                    <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[0].totalBorrowsUSD, 2))}</h5>
                                 </div>
                                 <div className="borrowpower">
-                                    <h5 style={{ color: 'white' }}>Borrowing Power - 75%</h5>
-                                    <Progress value="75" />
+                                    <h5 style={{ color: 'white' }}>Borrowing Power Used - {calcBorrowPercent("v1") + "%"}</h5>
+                                    <Progress value={calcBorrowPercent("v1")} />
                                 </div>
 
                             </div>
                             <div className="marketheaderblock" style={{ paddingBottom: "75px" }}>
                                 <h4 style={{ color: 'white' }}>AAVE V2 Market</h4>
                                 <div className="marketheaderblock">
-                                    <p>Deposits</p>
-                                    <p style={{ fontFamily: 'Open Sans' }}>$21,000,000.00</p>
+                                    <h5 style={{ color: "white" }}>Deposits</h5>
+                                    <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[1].totalCollateralUSD, 2))}</h5>
                                 </div>
                                 <div className="marketheaderblock">
-                                    <p>Borrows</p>
-                                    <p style={{ fontFamily: 'Open Sans' }}>$5,000,000.00</p>
+                                    <h5 style={{ color: "white" }}>Borrows</h5>
+                                    <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[1].totalBorrowsUSD, 2))}</h5>
                                 </div>
                                 <div className="borrowpower">
-                                    <h5 style={{ color: 'white' }}>Borrowing Power - 40%</h5>
-                                    <Progress value="40" />
+                                    <h5 style={{ color: 'white' }}>Borrowing Power Used - {calcBorrowPercent("v2") + "%"}</h5>
+                                    <Progress value={calcBorrowPercent("v2")} />
                                 </div>
 
                             </div>
@@ -474,128 +682,8 @@ function Portfolio(props) {
 
 
 
-                        <div className="ratematrix">
-
-                            <Card className="shadow marketcard">
-                                <CardHeader className="border-0" style={{ backgroundColor: '#333', borderColor: '#333' }}>
-                                    <h3 className="actionHeader">AAVE V2 Market</h3>
-                                </CardHeader>
-                                <Table className="align-items-center table-flush" style={{ marginBottom: "0px", backgroundColor: '#333', borderColor: '#333' }} bordered responsive>
-                                    <thead>
-                                        <tr>
-                                            <th colSpan="3">Deposits</th>
-                                            <th colSpan="3">Borrows</th>
-                                        </tr>
-                                        <tr>
-                                            <th>Asset</th>
-                                            <th>Interest Rate</th>
-                                            <th>USD Value</th>
-                                            <th>Asset</th>
-                                            <th>Interest Rate</th>
-                                            <th>USD Value</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="tbody-dark">
-
-                                        <tr>
-                                            <td>1,000,000 USDC</td>
-                                            <td>14.2% Variable</td>
-                                            <td>$1,000,000</td>
-                                            <td>500,000 DAI</td>
-                                            <td>7.2% Stable</td>
-                                            <td>$500,000</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2000 AAVE</td>
-                                            <td>0.2% Variable</td>
-                                            <td>$560,000</td>
-                                            <td>250,000 TUSD</td>
-                                            <td>13.% Variable</td>
-                                            <td>$250,000</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2000 SNX</td>
-                                            <td>2.5% Variable</td>
-                                            <td>$33,000</td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
-                                    </tbody>
-                                </Table>
-                            </Card>
-                            <div className="actionbuttonrow">
-                                <Button className="actionbutton" onClick={() => { setAction('v2', 'Deposit') }}>Deposit</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v2', 'Withdraw') }}>Withdraw</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v2', 'Collateral Swap') }}> Collateral Swap</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v2', 'AAVEtrage') }} style={{ backgroundColor: '#B6509E', marginTop: '0px' }}>AAVEtrage</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v2', 'Borrow') }} >Borrow</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v2', 'Payback') }}>Payback</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v2', 'Debt Swap') }}>Debt Swap</Button>
-                            </div>
-                            {displayV2ActionPanel()}
-                        </div>
-                        <div className="ratematrix">
-
-                            <Card className="shadow marketcard">
-                                <CardHeader className="border-0" style={{ backgroundColor: '#333', borderColor: '#333' }}>
-                                    <h3 className="actionHeader">AAVE V1 Market</h3>
-                                </CardHeader>
-                                <Table className="align-items-center table-flush" style={{ marginBottom: "0px", backgroundColor: '#333', borderColor: '#333' }} bordered responsive>
-                                    <thead>
-                                        <tr>
-                                            <th colSpan="3">Deposits</th>
-                                            <th colSpan="3">Borrows</th>
-                                        </tr>
-                                        <tr>
-                                            <th>Asset</th>
-                                            <th>Interest Rate</th>
-                                            <th>USD Value</th>
-                                            <th>Asset</th>
-                                            <th>Interest Rate</th>
-                                            <th>USD Value</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-
-                                        <tr>
-                                            <td>1,000,000 USDC</td>
-                                            <td>14.2% Variable</td>
-                                            <td>$1,000,000</td>
-                                            <td>500,000 DAI</td>
-                                            <td>7.2% Stable</td>
-                                            <td>$500,000</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2000 AAVE</td>
-                                            <td>0.2% Variable</td>
-                                            <td>$560,000</td>
-                                            <td>250,000 TUSD</td>
-                                            <td>13.% Variable</td>
-                                            <td>$250,000</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2000 SNX</td>
-                                            <td>2.5% Variable</td>
-                                            <td>$33,000</td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
-                                    </tbody>
-                                </Table>
-                            </Card>
-                            <div className="actionbuttonrow">
-                                <Button className="actionbutton" onClick={() => { setAction('v1', 'Deposit') }}>Deposit</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v1', 'Withdraw') }}>Withdraw</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v1', 'Collateral Swap') }}> Collateral Swap</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v1', 'AAVEtrage') }} style={{ backgroundColor: '#B6509E', marginTop: '0px' }}>AAVEtrage</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v1', 'Borrow') }} >Borrow</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v1', 'Payback') }}>Payback</Button>
-                                <Button className="actionbutton" onClick={() => { setAction('v1', 'Debt Swap') }}>Debt Swap</Button>
-                            </div>
-                            {displayV1ActionPanel()}
-                        </div>
+                        {displayV2Portfolio()}
+                        {displayV1Portfolio()}
 
 
 
