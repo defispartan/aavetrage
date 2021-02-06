@@ -139,7 +139,7 @@
 
 .profit {
 padding-top:0px;
-font-size: 1.15em;
+font-size: 1.25em;
 
 }
 
@@ -176,7 +176,7 @@ font-size: 1.15em;
   text-align: center;
   min-width: 350px;
   font-size: 2em;
-  padding-top: 30px;
+  padding-top: 100px;
   font-family: 'Orbitron'
 }
 
@@ -314,7 +314,6 @@ a:hover {
 
 .rateRow{
   width: 100%;
-  color: black;
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
@@ -342,4 +341,17 @@ a:hover {
   width: 100%;
   margin: 0 auto;
   text-align: center;
+}
+
+.description{
+  width: 90%;
+  margin: 0 auto;
+  text-align: center;
+  font-family:"Orbitron", sans-serif;
+  font-size: 1.3em;
+}
+
+.kawai{
+  width: 100%; 
+  margin: 0 auto;
 }

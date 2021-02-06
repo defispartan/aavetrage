@@ -69,6 +69,7 @@ function About(props) {
                     </div>
                     <div className="aboutsection">
                         <h3 className="aboutheader">What is AAVEtrage?</h3>
+                        <p>                    AAVEtrage is dashboard focused on interest rate arbitrage. AAVE offers stable and variable rate borrowing for a variety of stablecoins (and in the future a variety of markets). Each stablecoin has distinct use cases, creating different streams of lending and borrowing demand, creating interest rate spreads. </p>
                     </div>
                     <div className="aboutsection">
                         <h3 className="aboutheader">What is a flashloan?</h3>
