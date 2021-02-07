@@ -1,7 +1,5 @@
 pragma solidity 0.8.0;
 
-// import "hardhat/console.sol";
-
 interface IERC20 {
     function totalSupply() external view returns (uint256);
     function balanceOf(address account) external view returns (uint256);
@@ -37,37 +35,128 @@ interface IAaveV2LendingPool {
     function getUserAccountData(address user) external;
 }
 
+interface IUniswapV2Router02 {
+    function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
+    function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
+}
+
 contract Aavetrage {
     
     IAaveV1AddressProvider public aaveV1AddressProvider;
     IAaveV2AddressProvider public aaveV2AddressProvider;
-
-    event UserLTV(address user, uint256 ltv);
+    IUniswapV2Router02 public uniswapV2Router02;
+    uint16 private aaveV2ReferralCode  = 0;
 
     constructor(
         address _v1AddressProvider,
-        address _v2AddressProvider
+        address _v2AddressProvider,
+        address _uniswapV2Router02
     ) public {
         aaveV1AddressProvider = IAaveV1AddressProvider(_v1AddressProvider);
         aaveV2AddressProvider = IAaveV2AddressProvider(_v2AddressProvider);
+        uniswapV2Router02 = IUniswapV2Router02(_uniswapV2Router02);
     }
 
 
+    /**
+        Called by AaveV2 LendingPool
+     */
+    function executeOperation(
+        address[] calldata assets,
+        uint256[] calldata amounts,
+        uint256[] calldata premiums,
+        address initiator,
+        bytes calldata params
+    )
+        external
+        // override
+        returns (bool)
+    {
+        address collateralAddress;
+        uint256 collateralAmount;
+        address borrowAddress;
+        uint256 borrowAmount;
+        address originalSender;
+
+        (originalSender, collateralAddress, collateralAmount, borrowAddress, borrowAmount) = abi.decode(params, (address, address, uint256, address, uint256));
+
+        /*
+        (2) obtain collateral from originalSender
+         */
+        IERC20(collateralAddress).transferFrom(originalSender, address(this), collateralAmount);
+
+        /*
+        (3) Swap borrowed funds into collateral asset
+         */
+        require(IERC20(borrowAddress).approve(address(uniswapV2Router02), borrowAmount), "failed to approve borrow amount");
+
+        address[] memory path = new address[](2);
+        path[0] = borrowAddress;
+        path[1] = collateralAddress;
+
+        uint256[] memory swapAmounts = uniswapV2Router02.swapExactTokensForTokens(
+            borrowAmount,
+            0,
+            path,
+            address(this),
+            block.timestamp);
+
+        uint256 totalCollateralBalance = collateralAmount + swapAmounts[1];
+
+        /*
+        (4) Deposit full collateral amount on behalf of originalSender
+         */
+        IAaveV2LendingPool v2LendingPool = IAaveV2LendingPool(aaveV2AddressProvider.getLendingPool());
+        require(IERC20(collateralAddress).approve(address(v2LendingPool), totalCollateralBalance), "failed to approve v2LendingPool spending");
+
+        v2LendingPool.deposit(
+            collateralAddress, totalCollateralBalance,
+            originalSender, aaveV2ReferralCode);
+        
+        return true;
+    }
+
+    function _encodeFlashloanParams(
+        address originalSender,
+        address collateralAddress, uint256 collateralAmount,
+        address borrowAddress, uint256 borrowAmount
+    ) internal returns (bytes memory) {
+        return abi.encode(originalSender, collateralAddress, collateralAmount, borrowAddress, borrowAmount);
+    }
+
+    function _getV2LendingPool() internal returns (IAaveV2LendingPool) {
+        return IAaveV2LendingPool(aaveV2AddressProvider.getLendingPool());
+    }
+
+    // prevents stack too deep errors
+    function _runFlashLoan(address[] memory assets, uint256[] memory amounts, uint256[] memory modes, bytes memory params) internal {
+        _getV2LendingPool().flashLoan(
+            address(this),
+            assets, amounts, modes,
+            msg.sender,
+            params,
+            0);
+    }
+
     function AaveV2LeveragedDeposit(
-        address collateralAddress, uint256 collateralAmount, address borrowAddress, uint256 borrowAmount, uint256 loops
+        address collateralAddress, uint256 collateralAmount, address borrowAddress, uint256 borrowAmount, uint256 loanMode
     ) public {
 
-        IAaveV2LendingPool v2LendingPool = IAaveV2LendingPool(aaveV2AddressProvider.getLendingPool());
-        require(IERC20(collateralAddress).transferFrom(msg.sender, address(this), collateralAmount), "failed to transfer collateral to contract");
-
-        IERC20(collateralAddress).approve(address(v2LendingPool), collateralAmount);
-        v2LendingPool.deposit(collateralAddress, collateralAmount, msg.sender, 0);
-
-        IERC20(borrowAddress).approve(address(v2LendingPool), borrowAmount*loops);
-        // is there ever a reason to actually do the loop? I think this can be just raw values
-        for (uint i = 0; i < loops; i++) {
-            v2LendingPool.borrow(borrowAddress, borrowAmount, 1, 0, msg.sender);
-            v2LendingPool.deposit(borrowAddress, borrowAmount, msg.sender, 0);
+        address[] memory assets = new address[](1);
+        uint256[] memory amounts = new uint256[](1);
+        uint256[] memory modes = new uint256[](1);
+        {
+        assets[0] = address(borrowAddress);
+        amounts[0] = uint256(borrowAmount);
+        modes[0] = uint256(loanMode);
         }
+
+        _runFlashLoan(assets, amounts, modes, _encodeFlashloanParams(msg.sender, collateralAddress, collateralAmount, borrowAddress, borrowAmount));
     }
 }
