@@ -48,8 +48,7 @@ const Home = () => {
             setErrorMessage(ret[1])
         }
         else {
-            console.log("RETTTT")
-            console.log(ret)
+
             setOps([ret[1], ret[2]])
             setRates(ret[0])
             localStorage.setItem("rates", JSON.stringify(ret[0]))
@@ -116,8 +115,6 @@ const Home = () => {
         let bestBorrow = []
         let bestStableBorrow = []
         if (ratesLoaded) {
-            console.log("OPS")
-            console.log(ops)
             if (ops[0][0] > ops[1][0]) {
                 bestDeposit = ['V1', ops[0][1], ops[0][0]]
             }
@@ -184,7 +181,7 @@ const Home = () => {
                     <div className="col-four">
                         <img src={Ghost} className="ghost"></img>
                         <i className="fa fa-arrow-right" style={{ marginLeft: "30px", fontSize: "3em" }}></i>
-                        <h4 style={{ fontFamily: "Orbitron", color: "white", paddingTop: "10px" }}>Borrow</h4>
+                        <h5 style={{ fontFamily: "Orbitron", color: "white", paddingTop: "10px" }}>Borrow</h5>
                     </div>
                     <div className="col-four">
                         <div className="borrowWrap">
@@ -215,7 +212,7 @@ const Home = () => {
                     <div className="col-four">
                         <i className="fa fa-arrow-right" style={{ marginRight: "30px", fontSize: "3em" }}></i>
                         <img src={Ghost} className="ghost"></img>
-                        <h4 style={{ fontFamily: "Orbitron", color: "white", paddingTop: "10px" }}>Deposit</h4>
+                        <h5 style={{ fontFamily: "Orbitron", color: "white", paddingTop: "10px" }}>Deposit</h5>
                     </div>
 
 

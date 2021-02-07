@@ -18,80 +18,97 @@
 import React from "react";
 import { Route, Switch, Redirect } from "react-router-dom";
 import routes from './routes.js'
+import Home from './Home.js'
+import { getRates } from './Data/Rates.js'
+import Portfolio from './Portfolio.js'
+import dayjs from "dayjs";
 
 
 
 class Admin extends React.Component {
+  state = {
+    rates: JSON.parse(localStorage.getItem("rates")) || null,
+    ratesLoaded: JSON.parse(localStorage.getItem("ratesLoaded")) || null,
+    lastRefresh: localStorage.getItem("lastRefresh") || null,
+    errorActive: false,
+    errorMessage: "",
+    ops: JSON.parse(localStorage.getItem("ops")) || null
+  }
 
 
-    componentDidUpdate(e) {
-        document.documentElement.scrollTop = 0;
-        document.scrollingElement.scrollTop = 0;
+  async fetchRates() {
+    let ret = await getRates()
+    if (ret[0] === true) {
+      this.setState({ errorActive: true, errorMessage: ret[1] })
     }
+    else {
+      this.setState({ ops: [ret[1], ret[2]] })
+      this.setState({ rates: ret[0] })
+      localStorage.setItem("rates", JSON.stringify(ret[0]))
+      localStorage.setItem("ratesLoaded", true)
+      localStorage.setItem("lastRefresh", dayjs().format())
+      localStorage.setItem("ops", JSON.stringify([ret[1], ret[2]]))
+      this.setState({ lastRefresh: dayjs().format(), ratesLoaded: true })
+    }
+  }
+
+  rateRefresh = () => {
+    this.setState({ ratesLoaded: false })
+    this.fetchRates()
+  }
+
+  componentDidMount() {
+    if (!this.state.ratesLoaded) {
+      this.fetchRates()
+    }
+  }
 
 
-    /*  
-Can replace Route component with options for select paths if functions/state
-need to be shared between pages
- 
-getRoutes = (routes) => {
+  getRoutes = (routes) => {
     return routes.map((prop, key) => {
       if (prop.path === "/portfolio") {
-        return (
-          <Route
-            path={prop.path}
-            key={key}
-            render={(props) => (
-              <PortfolioHome
-                {...props}
-                setWalletConnect={this.setWalletConnect}
-                connectWallet={this.connectWallet}
-                walletConnected={this.state.walletConnected}
-              />
-            )}
+        return (<Route path={prop.path} key={key} render={(props) =>
+          <Portfolio
+            {...props}
+            rateRefresh={this.rateRefresh}
+            rates={this.state.rates}
+            ratesLoaded={this.state.ratesLoaded}
+            lastRefresh={this.state.lastRefresh}
+            errorActive={this.state.errorActive}
+            errorMessage={this.state.errorMessage}
           />
-        );
-      } else if (prop.path === "/zap") {
-        return (
-          <Route
-            path={prop.path}
-            key={key}
-            render={(props) => (
-              <ZapHome
-                {...props}
-                setWalletConnect={this.setWalletConnect}
-                connectWallet={this.connectWallet}
-                walletConnected={this.state.walletConnected}
-              />
-            )}
-          />
-        );
-      }  else if (prop.layout === "admin") {
-        return <Route path={prop.path} component={prop.component} key={key} />;
-      } else {
-        return null;
+        } />)
       }
+      else if (prop.path === "/index") {
+        return (<Route path={prop.path} key={key} render={(props) =>
+          <Home
+            {...props}
+            rateRefresh={this.rateRefresh}
+            rates={this.state.rates}
+            ratesLoaded={this.state.ratesLoaded}
+            lastRefresh={this.state.lastRefresh}
+            ops={this.state.ops}
+            errorActive={this.state.errorActive}
+            errorMessage={this.state.errorMessage}
+          />
+        } />)
+      }
+      return <Route path={prop.path} component={prop.component} key={key} />;
     });
-  }; */
+  }
 
-    getRoutes = (routes) => {
-        return routes.map((prop, key) => {
-            return <Route path={prop.path} component={prop.component} key={key} />;
-        });
-    }
-
-    render() {
-        return (
-            <>
-                <div className="main-content" ref="mainContent">
-                    <Switch>
-                        {this.getRoutes(routes)}
-                        <Redirect from="*" to="/index" />
-                    </Switch>
-                </div>
-            </>
-        );
-    }
+  render() {
+    return (
+      <>
+        <div className="main-content" ref="mainContent">
+          <Switch>
+            {this.getRoutes(routes)}
+            <Redirect from="*" to="/index" />
+          </Switch>
+        </div>
+      </>
+    );
+  }
 }
 
 export default Admin;

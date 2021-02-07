@@ -18,7 +18,7 @@
   }
   .aavetrageimage, .portfolioimage{
     width: 50%;
-    min-width: 300px;
+    min-width: 350px;
   
   }
 
@@ -354,4 +354,45 @@ a:hover {
 .kawai{
   width: 100%; 
   margin: 0 auto;
+}
+
+.walletpanel{
+   position: absolute;
+   text-align: right;
+    right: 0;
+    top: 0;
+    padding: 10;
+
+}
+
+@media (max-width:1000px){
+  .walletpanel{
+    width: 100%;
+    padding-bottom: 30px;
+    margin: 0 auto;
+  position: relative;
+  text-align: center
+  }
+  .ratematrix{
+    width: 90%
+  }
+  .col-two{
+    width:100%;
+  }
+  .aavetrage{
+    width:100%
+  }
+}
+
+.barChartWrapper{
+  padding-top: 20px;
+  padding-bottom: 20px;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.borrowSlider{
+  width: 80%;
+  margin: 0 auto;
+  padding-bottom: 40px;
 }

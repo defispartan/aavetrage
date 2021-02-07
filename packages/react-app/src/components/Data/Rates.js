@@ -5,8 +5,6 @@ import { V1_RESERVES, V2_RESERVES } from './Query.js'
 const setOps = (opsArray, element) => {
     let borrow = round(parseRay(element.variableBorrowRate), 2)
     let stableborrow = round(parseRay(element.stableBorrowRate), 2)
-    console.log(element)
-    console.log(stableborrow)
     let deposit = round(parseRay(element.liquidityRate), 2)
     if (deposit > opsArray[0]) {
         opsArray[0] = deposit
@@ -31,6 +29,7 @@ const round = (value, decimals) => {
 }
 
 const getAppend = (element) => {
+    console.log(element)
     return [round(parseRay(element.liquidityRate), 2), round(parseRay(element.variableBorrowRate), 2), round(parseRay(element.stableBorrowRate), 2)]
 }
 export async function getRates() {

@@ -17,6 +17,10 @@ import PortfolioImg from '../assets/img/portfolio.png'
 import AAVEText from '../assets/img/aavetext.png'
 import { Button, Card, CardBody, CardHeader, Container, Progress, Table, Spinner } from 'reactstrap';
 import { getPortfolio } from './Data/GetPortfolio.js'
+import dayjs from "dayjs";
+import { Bar } from "react-chartjs-2";
+import RangeSlider from 'react-bootstrap-range-slider';
+import NumericInput from 'react-numeric-input';
 /*
     Welcome to 🏗 scaffold-eth !
 
@@ -65,6 +69,14 @@ const numberWithCommas = (x) => {
     return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+
+
+
+
+
+
+
+
 function Portfolio(props) {
     const [injectedProvider, setInjectedProvider] = useState(null);
 
@@ -77,7 +89,71 @@ function Portfolio(props) {
     const [portfolioData, setPortfolioData] = useState(null)
     const [aavetrageBorrowSelect, setaavetrageBorrowSelect] = useState(null)
     const [aavetrageDepositSelect, setaavetrageDepositSelect] = useState(null)
+    const [rates, setRates] = useState(props.rates)
+    const [ratesLoaded, setRatesLoaded] = useState(props.ratesLoaded)
+    const [lastRefresh, setLastRefresh] = useState(props.lastRefresh)
+    const [selectedBorrowAmount, setSelectedBorrowAmount] = useState(0)
+    const [statusChartData, setStatusChartData] = useState({
+        labels: ['Collateral', 'Debt'],
+        datasets: [
+            {
+                label: 'Current',
+                backgroundColor: ["#2EBAC6", '#B6509E'],
+                data: [0, 0],
 
+
+            },
+            {
+                label: 'After AAVEtrage',
+                backgroundColor: ["#216f75", '#782564'],
+                data: [0, 0],
+
+
+            }
+        ]
+
+    })
+    const [maxBorrow, setMaxBorrow] = useState(0)
+    const [collateral, setCollateral] = useState(0)
+    const [maxAxis, setMaxAxis] = useState(0)
+    const [options, setOptions] = useState({
+        scales: {
+            yAxes: [
+                {
+                    scaleLabel: {
+                        display: true,
+                        labelString: "Value (USD)",
+                        fontColor: "white"
+                    },
+                    ticks: {
+                        // Include a dollar sign in the ticks
+                        callback: function (value, index, values) {
+                            return "$" + numberWithCommas(value.toFixed(0));
+                        },
+                        fontColor: "white",
+                        max: 300000
+                    },
+                    stacked: true
+                },
+            ],
+            xAxes: [
+                {
+                    ticks: {
+                        fontColor: "white"
+                    },
+                    stacked: true
+                }
+            ]
+        },
+        legend: {
+            display: true,
+            labels: {
+                fontColor: "white"
+            }
+        },
+    })
+    const [newHealthFactor, setNewHealthFactor] = useState(0.00)
+    const [collatEnabled, setCollatEnabled] = useState()
 
     /* 💵 this hook will get the price of ETH from 🦄 Uniswap: */
     const price = useExchangePrice(mainnetProvider); //1 for xdai
@@ -145,10 +221,58 @@ function Portfolio(props) {
 
     const fetchPortfolioData = async () => {
         let port = await getPortfolio(injectedProvider.provider.selectedAddress, price);
-        console.log(port)
         setPortfolioData(port)
         setPortfolioLoaded(true)
     }
+
+    const calcMaxBorrow = () => {
+        if (aavetrageDepositSelect[2] === 'v1') {
+            setCollateral(portfolioData[1].totalCollateralUSD)
+            let maxBorrowETH = parseFloat(portfolioData[1].availableBorrowsETH)
+            setMaxBorrow(maxBorrowETH * price)
+            setMaxAxis(portfolioData[1].totalCollateralUSD)
+            let optCopy = options
+            optCopy.scales.yAxes[0].ticks.max = parseInt(portfolioData[1].totalCollateralUSD)
+            setOptions(optCopy)
+            changeSliderValue(0)
+
+        }
+        else {
+            if (aavetrageDepositSelect[0] === 'usdc' || aavetrageDepositSelect[0] === 'dai' || aavetrageDepositSelect[0] === 'tusd') {
+                setCollateral(portfolioData[1].totalCollateralUSD)
+                let maxBorrowAmount = (-1.4 * portfolioData[1].totalBorrowsETH + portfolioData[1].totalCollateralETH * portfolioData[1].currentLiquidationThreshold) / (1.4 - 0.75)
+                setMaxBorrow(maxBorrowAmount * price)
+                setMaxAxis(portfolioData[1].totalCollateralUSD + parseFloat(maxBorrowAmount * price))
+                let optCopy = options
+                optCopy.scales.yAxes[0].ticks.max = parseInt(portfolioData[1].totalCollateralUSD) + parseInt(maxBorrowAmount * price)
+                setOptions(optCopy)
+                changeSliderValue(0)
+            }
+            else {
+                setCollateral(portfolioData[1].totalCollateralUSD)
+                let maxBorrowETH = parseFloat(portfolioData[1].availableBorrowsETH)
+                setMaxBorrow(maxBorrowETH * price)
+                setMaxAxis(portfolioData[1].totalCollateralUSD)
+                let optCopy = options
+                optCopy.scales.yAxes[0].ticks.max = parseInt(portfolioData[1].totalCollateralUSD)
+                setOptions(optCopy)
+                changeSliderValue(0)
+            }
+
+        }
+    }
+
+
+    useEffect(() => {
+        if (portfolioData !== null) {
+            let chartCopy = statusChartData
+            chartCopy.datasets[0].data = [parseFloat(portfolioData[1].totalCollateralUSD), parseFloat(portfolioData[1].totalBorrowsUSD)]
+            setStatusChartData(chartCopy)
+
+        }
+    }, [portfolioData])
+
+
     useEffect(() => {
         if (web3Modal.cachedProvider) {
             loadWeb3Modal();
@@ -161,6 +285,19 @@ function Portfolio(props) {
             fetchPortfolioData()
         }
     }, [injectedProvider, price])
+
+    useEffect(() => {
+        setRates(props.rates)
+        setRatesLoaded(props.ratesLoaded)
+        setLastRefresh(props.lastRefresh)
+
+    }, [props])
+
+    useEffect(() => {
+        if (aavetrageDepositSelect !== null) {
+            calcMaxBorrow()
+        }
+    }, [aavetrageDepositSelect])
 
 
 
@@ -188,6 +325,7 @@ function Portfolio(props) {
                         <h3 className="actionHeader">{v1Action}</h3>
                     </CardHeader>
                     <CardBody>
+                        {returnRefresh()}
                         <p style={{ color: "red" }}>Coming Soon</p>
                     </CardBody>
                 </Card>
@@ -209,6 +347,7 @@ function Portfolio(props) {
 
                         </CardHeader>
                         <CardBody>
+                            {returnRefresh()}
                             <p style={{ color: "red" }}>Coming Soon</p>
                         </CardBody>
                     </Card>
@@ -225,128 +364,259 @@ function Portfolio(props) {
     }
 
     const displayBorrowRow = () => {
-        return (
-            <div className="rateRow">
-                <div className="rateRowEntry">
+        if (!ratesLoaded) {
+            return (<div style={{ width: '100%', margin: "0 auto", textAlign: "center" }}>
 
-                    <h5 className="actionHeader">USDC</h5>
-                    <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect('usdc variable') }}>%</Button>
-                    <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect('usdc stable') }}>%</Button>
+                <Spinner style={{ width: "3em", height: "3em" }} color="primary" />
+                <p style={{ color: 'white', paddingTop: '20px' }}>Loading borrow rates</p>
+            </div>)
+        }
+        else {
+            return (
+                <div className="rateRow">
+                    <div className="rateRowEntry">
+
+                        <h5 className="actionHeader">USDC</h5>
+                        <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect(['usdc', 'variable', 'v2']) }}>{rates['usdc'][1][1]}%</Button>
+                        <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect(['usdc', 'stable', 'v2']) }}>{rates['usdc'][1][2]}%</Button>
+                    </div>
+                    <div className="rateRowEntry">
+
+                        <h5 className="actionHeader">USDT</h5>
+                        <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect(['usdt', 'variable', 'v2']) }}>{rates['usdt'][1][1]}%</Button>
+                        <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect(['usdt', 'stable', 'v2']) }}>{rates['usdt'][1][2]}%</Button>
+                    </div>
+                    <div className="rateRowEntry">
+
+                        <h5 className="actionHeader">DAI</h5>
+                        <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect(['dai', 'variable', 'v2']) }}>{rates['dai'][1][1]}%</Button>
+                        <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect(['dai', 'stable', 'v2']) }}>{rates['dai'][1][2]}%</Button>
+                    </div>
+                    <div className="rateRowEntry">
+
+                        <h5 className="actionHeader">TUSD</h5>
+                        <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect(['tusd', 'variable', 'v2']) }}>{rates['tusd'][1][1]}%</Button>
+                        <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect(['tusd', 'stable', 'v2']) }}>{rates['tusd'][1][2]}%</Button>
+                    </div>
+                    <div className="rateRowEntry">
+
+                        <h5 className="actionHeader">SUSD</h5>
+                        <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect(['susd', 'variable', 'v2']) }}>{rates['susd'][1][1]}%</Button>
+                        <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect('na') }}>-</Button>
+                    </div>
+                    <div className="rateRowEntry">
+
+                        <h5 className="actionHeader">BUSD</h5>
+                        <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect(['busd', 'variable', 'v2']) }}>{rates['busd'][1][1]}%</Button>
+                        <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect('na') }}>-</Button>
+                    </div>
+                    <div className="rateRowEntry">
+
+                        <h5 className="actionHeader">GUSD</h5>
+                        <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect(['gusd', 'variable', 'v2']) }}>{rates['gusd'][1][1]}%</Button>
+                        <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect('gusd stable') }}>{rates['gusd'][1][2]}%</Button>
+                    </div>
+
                 </div>
-                <div className="rateRowEntry">
-
-                    <h5 className="actionHeader">USDT</h5>
-                    <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect('usdt variable') }}>%</Button>
-                    <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect('usdt stable') }}>%</Button>
-                </div>
-                <div className="rateRowEntry">
-
-                    <h5 className="actionHeader">DAI</h5>
-                    <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect('dai variable') }}>%</Button>
-                    <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect('dai stable') }}>%</Button>
-                </div>
-                <div className="rateRowEntry">
-
-                    <h5 className="actionHeader">TUSD</h5>
-                    <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect('tusd variable') }}>%</Button>
-                    <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect('tusd stable') }}>%</Button>
-                </div>
-                <div className="rateRowEntry">
-
-                    <h5 className="actionHeader">SUSD</h5>
-                    <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect('susd variable') }}>%</Button>
-                    <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect('susd stable') }}>%</Button>
-                </div>
-                <div className="rateRowEntry">
-
-                    <h5 className="actionHeader">BUSD</h5>
-                    <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect('busd variable') }}>%</Button>
-                    <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect('busd stable') }}>%</Button>
-                </div>
-                <div className="rateRowEntry">
-
-                    <h5 className="actionHeader">GUSD</h5>
-                    <Button outline className="stableButton" onClick={() => { setaavetrageBorrowSelect('gusd variable') }}>%</Button>
-                    <Button outline className="variableButton" onClick={() => { setaavetrageBorrowSelect('gusd stable') }}>%</Button>
-                </div>
-
-            </div>
-        )
+            )
+        }
     }
 
     const displayDepositRow = () => {
-        if (aavetrageBorrowSelect !== null) {
-            return (
-                <>
-                    <h4 className="actionHeader" style={{ paddingTop: "50px" }}>Select Deposit</h4>
-                    <div style={{ display: "inline-block" }}>
-                        <p style={{ display: "inline-block", color: "white", paddingRight: "20px" }}>Stable Rate<div className="box pink"></div>
-                        </p>
-                        <p style={{ display: "inline-block", color: "white" }}>
+        if (!ratesLoaded) {
+            return (<div style={{ width: '100%', margin: "0 auto", textAlign: "center" }}>
 
-                            Variable Rate<div className="box blue"></div>
-                        </p>
-                    </div>
-                    <div className="rateRow">
-                        <div className="rateRowEntry">
-
-                            <h5 className="actionHeader">USDC</h5>
-                            <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect('usdc variable') }}>%</Button>
-
-                        </div>
-                        <div className="rateRowEntry">
-
-                            <h5 className="actionHeader">USDT</h5>
-                            <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect('usdt variable') }}>%</Button>
-
-                        </div>
-                        <div className="rateRowEntry">
-
-                            <h5 className="actionHeader">DAI</h5>
-                            <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect('dai variable') }}>%</Button>
-
-                        </div>
-                        <div className="rateRowEntry">
-
-                            <h5 className="actionHeader">TUSD</h5>
-                            <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect('tusd variable') }}>%</Button>
-
-                        </div>
-                        <div className="rateRowEntry">
-
-                            <h5 className="actionHeader">SUSD</h5>
-                            <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect('susd variable') }}>%</Button>
-
-                        </div>
-                        <div className="rateRowEntry">
-
-                            <h5 className="actionHeader">BUSD</h5>
-                            <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect('busd variable') }}>%</Button>
-
-                        </div>
-                        <div className="rateRowEntry">
-
-                            <h5 className="actionHeader">GUSD</h5>
-                            <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect('gusd variable') }}>%</Button>
-
-                        </div>
-
-                    </div></>)
+                <Spinner style={{ width: "3em", height: "3em" }} color="primary" />
+                <p style={{ color: 'white', paddingTop: '20px' }}>Loading deposit rates</p>
+            </div>)
         }
         else {
-            return (<></>)
+            if (aavetrageBorrowSelect !== null && aavetrageBorrowSelect !== "na") {
+                return (
+                    <>
+                        <h4 className="actionHeader" style={{ paddingTop: "50px" }}>Select Deposit</h4>
+                        <div style={{ display: "inline-block" }}>
+                            <div style={{ display: "inline-block", color: "white", paddingRight: "20px" }}>Stable Rate<div className="box pink"></div>
+                            </div>
+                            <div style={{ display: "inline-block", color: "white" }}>
+
+                                Variable Rate<div className="box blue"></div>
+                            </div>
+                        </div>
+                        <h5 className="actionHeader" style={{ paddingTop: "20px" }}>AAVE V1 Market</h5>
+                        <div className="rateRow">
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">USDC</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['usdc', 'variable', 'v1']) }}>{rates['usdc'][0][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">USDT</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['usdt', 'variable', 'v1']) }}>{rates['usdt'][0][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">DAI</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['dai', 'variable', 'v1']) }}>{rates['dai'][0][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">TUSD</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['tusd', 'variable', 'v1']) }}>{rates['tusd'][0][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">SUSD</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['susd', 'variable', 'v1']) }}>{rates['susd'][0][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">BUSD</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['busd', 'variable', 'v1']) }}>{rates['busd'][0][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">GUSD</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect('na') }}>-</Button>
+
+                            </div>
+
+                        </div>
+                        <h5 className="actionHeader" style={{ paddingTop: "25px" }}>AAVE V2 Market</h5>
+                        <p className="actionHeader">Starred tokens can be used as collateral, allowing for leveraged AAVEtrage!</p>
+                        <div className="rateRow">
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">USDC <i className="fa fa-star"></i></h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['usdc', 'variable', 'v2']) }}>{rates['usdc'][1][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">USDT</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['usdt', 'variable', 'v2']) }}>{rates['usdt'][1][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">DAI <i className="fa fa-star"></i></h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['dai', 'variable', 'v2']) }}>{rates['dai'][1][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">TUSD <i className="fa fa-star"></i></h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['tusd', 'variable', 'v2']) }}>{rates['tusd'][1][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">SUSD</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['susd', 'variable', 'v2']) }}>{rates['susd'][1][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">BUSD</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['busd', 'variable', 'v2']) }}>{rates['busd'][1][0]}%</Button>
+
+                            </div>
+                            <div className="rateRowEntry">
+
+                                <h5 className="actionHeader">GUSD</h5>
+                                <Button outline className="variableButton" onClick={() => { setaavetrageDepositSelect(['gusd', 'variable', 'v2']) }}>{rates['gusd'][1][0]}%</Button>
+
+                            </div>
+
+                        </div>
+
+
+                    </>)
+            }
+            else {
+                return (<></>)
+            }
         }
     }
 
+
+
+    const changeSliderValue = (value) => {
+        setSelectedBorrowAmount(value)
+        let chartCopy = statusChartData
+        if (aavetrageDepositSelect[2] === 'v2') {
+            chartCopy.datasets[1].data = [parseFloat(selectedBorrowAmount), parseFloat(selectedBorrowAmount)]
+            let ethToLiquidate = ((parseFloat(portfolioData[1].totalCollateralETH) + (parseFloat(selectedBorrowAmount) / price))) * parseFloat(portfolioData[1].currentLiquidationThreshold)
+
+            let ethBorrowSum = (parseFloat(portfolioData[1].totalBorrowsETH) + (parseFloat(selectedBorrowAmount) / price))
+
+            let newHealth = ethToLiquidate / ethBorrowSum
+            setNewHealthFactor(newHealth)
+            setStatusChartData(chartCopy)
+
+        }
+        else {
+            chartCopy.datasets[1].data = [0, parseFloat(selectedBorrowAmount)]
+            let ethToLiquidate = (parseFloat(portfolioData[1].totalCollateralETH) * parseFloat(portfolioData[1].currentLiquidationThreshold))
+
+            let ethBorrowSum = (parseFloat(portfolioData[1].totalBorrowsETH) + (parseFloat(selectedBorrowAmount) / price))
+
+            let newHealth = ethToLiquidate / ethBorrowSum
+            setNewHealthFactor(newHealth)
+            setStatusChartData(chartCopy)
+        }
+    }
+
+    const getDepositRate = () => {
+        if (aavetrageDepositSelect[2] === 'v1') {
+            return (rates[aavetrageDepositSelect[0]][0][0])
+        }
+        else {
+            return (rates[aavetrageDepositSelect[0]][1][0])
+        }
+
+    }
+
     const displayAAVEtrageSelect = () => {
-        if (aavetrageBorrowSelect !== null && aavetrageDepositSelect !== null) {
+        console.log(portfolioData[1])
+        if (aavetrageBorrowSelect !== null && aavetrageDepositSelect !== null && aavetrageDepositSelect !== "na") {
             return (
                 <>
                     <h4 className="actionHeader" style={{ paddingTop: "50px" }}>Select AAVEtrage Amounts</h4>
                     <div style={{ width: "100%" }}>
-                        <div style={{ width: "50%", float: "left" }}><p>Collateral and Debt Graph</p></div>
-                        <div style={{ width: "50%", float: "right" }}><p>Borrow Amount Slider</p><p>Health Factor Change</p></div>
-                        <div style={{ width: "33%", margin: "0 auto", float: "center" }}><Button color="success">Execute AAVEtrage</Button></div>
+                        <div style={{ width: "50%", float: "left" }}>
+                            <div className="barChartWrapper"><Bar data={statusChartData} options={options}></Bar></div>
+
+
+
+
+                        </div>
+                        <div style={{ width: "50%", float: "right", textAlign: 'center' }}>
+                            <h5 className="actionHeader" style={{ paddingTop: '20px' }}>Select {aavetrageBorrowSelect[0].toUpperCase()} Borrow Amount</h5>
+                            <div className="borrowSlider">
+                                <RangeSlider
+                                    min={0}
+                                    max={parseInt(maxBorrow)}
+                                    step={parseInt(maxBorrow / 100)}
+                                    value={selectedBorrowAmount}
+                                    tooltipLabel={currentValue => `$${round(currentValue, 0)}`}
+                                    tooltip='on'
+                                    onChange={(a) => changeSliderValue(a.target.value)}
+                                />
+
+                            </div>
+                            <p className="actionHeader">Depositing {selectedBorrowAmount} {aavetrageDepositSelect[0].toUpperCase()} @ {getDepositRate()} {aavetrageDepositSelect[1]} APR in AAVE {aavetrageDepositSelect[2].toUpperCase()}</p>
+                            <h5 className="actionHeader">Health Factor Change</h5>
+                            <p style={{ color: "#50d45e" }}>{round(portfolioData[1].healthFactor, 2)} &#8594; {round(newHealthFactor, 2)}</p>
+                        </div>
+                        <div style={{ width: "33%", margin: "0 auto", float: "center", paddingTop: "20px" }}><Button color="success">Execute AAVEtrage</Button></div>
                     </div>
                 </>)
         }
@@ -362,6 +632,7 @@ function Portfolio(props) {
                     <h3 className="actionHeader">{v2Action}</h3>
                 </CardHeader>
                 <CardBody>
+                    {returnRefresh()}
                     <h4 className="actionHeader">Select Borrow</h4>
                     <div style={{ display: "inline-block" }}>
                         <div style={{ display: "inline-block", color: "white", paddingRight: "30px" }}>Stable Rate<div className="box pink"></div>
@@ -392,8 +663,7 @@ function Portfolio(props) {
     const displayWalletConnect = () => {
         if (injectedProvider !== null) {
             return (
-                <div style={{ position: "absolute", textAlign: "right", right: 0, top: 0, padding: 10 }
-                }>
+                <div className='walletpanel'>
                     <Account
                         minimized={false}
                         address={address}
@@ -458,34 +728,69 @@ function Portfolio(props) {
         let deposits = []
         let borrows = []
         reserves.forEach(entry => {
-            if (entry.principalATokenBalance > 0) {
-                deposits.push(entry)
+            if (entry.principalATokenBalance > 0 || entry.scaledATokenBalance > 0) {
+                if (entry.underlyingBalanceUSD > 0.01 || entry.currentUnderlyingBalanceUSD > 0.01) {
+
+                    deposits.push(entry)
+                }
             }
             else {
-                borrows.push(entry)
+                if (entry.totalBorrowsUSD > 0.01 || entry.currentBorrowsUSD > 0.01) {
+
+                    borrows.push(entry)
+                }
             }
         })
         return [deposits, borrows]
     }
 
+    const triggerRefresh = () => {
+        setaavetrageBorrowSelect(null)
+        setaavetrageDepositSelect(null)
+        props.rateRefresh()
+    }
+
+    const returnRefresh = () => {
+        return (<div style={{ paddingBottom: "10px", color: "white", width: "75%", display: "inline-block" }}>
+            <Button style={{ display: "inline-block", float: "center" }} onClick={() => triggerRefresh()}>Refresh Interest Rates</Button>
+
+
+
+            <p style={{ marginLeft: '10px', marginTop: "5px", float: "center" }}>
+                {" "}
+Last Refresh:{" "}
+                {round(dayjs().diff(dayjs(lastRefresh)) / 60000, 0)}{" "}
+minutes ago
+</p>
+        </div>)
+    }
+
     const displayV2Table = () => {
         let split = splitReserves(portfolioData[1].reservesData)
-        console.log("v2 PLIT")
-        console.log(split)
+
         let deposits = split[0]
         let borrows = split[1]
         let numRow = Math.max(deposits.length, borrows.length)
         let rowCount = 0
         let rows = []
+        console.log(portfolioData[1].reservesData)
         while (rowCount < numRow) {
             if (rowCount < deposits.length && rowCount < borrows.length) {
-                rows.push(['1000 USDC', '14% Variable', '$100000', '590000 DAI', '7.2% stable', '$500000'])
+                let borrowString = ""
+                if (parseFloat(borrows[rowCount].variableBorrows) > 0) {
+                    borrowString = round(rates[borrows[rowCount].reserve.symbol.toLowerCase()][1][1], 2) + "% Variable"
+                }
+                else {
+                    borrowString = round(rates[borrows[rowCount].reserve.symbol.toLowerCase()][1][2], 2) + "% Stable"
+                }
+                rows.push([round(deposits[rowCount].underlyingBalance, 4) + " " + deposits[rowCount].reserve.symbol, round((deposits[rowCount].reserve.liquidityRate * 100), 2) + "% Variable", "$" + numberWithCommas(round(deposits[rowCount].underlyingBalanceUSD, 2)), round(borrows[rowCount].totalBorrows, 2) + " " + borrows[rowCount].reserve.symbol, borrowString, "$" + numberWithCommas(round(borrows[rowCount].totalBorrowsUSD, 2))])
             }
             else if (rowCount < deposits.length && rowCount >= borrows.length) {
-                rows.push(['1000 USDC', '14% Variable', '$100000', '-', '-', '-'])
+                rows.push([round(deposits[rowCount].underlyingBalance, 4) + " " + deposits[rowCount].reserve.symbol, round((deposits[rowCount].reserve.liquidityRate * 100), 2) + "% Variable", "$" + numberWithCommas(round(deposits[rowCount].underlyingBalanceUSD, 2)), '', '', ''])
             }
             else if (rowCount >= deposits.length && rowCount < borrows.length) {
-                rows.push(['-', '-', '-', '590000 DAI', '7.2% stable', '$500000'])
+                let borrowString = round(borrows[rowCount].borrowRate * 100, 2) + "% " + borrows[rowCount].borrowRateMode
+                rows.push(['', '', '', round(borrows[rowCount].totalBorrows, 4) + " " + borrows[rowCount].reserve.symbol, borrowString, "$" + numberWithCommas(round(borrows[rowCount].totalBorrowsUSD, 2))])
             }
 
             rowCount++
@@ -494,7 +799,7 @@ function Portfolio(props) {
             <tbody>
 
                 {    rows.map(row => {
-                    return (<tr>
+                    return (<tr key={row[0] + row[1] + row[2] + row[3] + row[4] + row[5]}>
                         <td>{row[0]}</td>
                         <td>{row[1]}</td>
                         <td>{row[2]}</td>
@@ -553,7 +858,6 @@ function Portfolio(props) {
         let deposits = split[0]
         let borrows = split[1]
         let numRow = Math.max(deposits.length, borrows.length)
-        console.log(numRow)
         let rowCount = 0
         let rows = []
         while (rowCount < numRow) {
@@ -574,7 +878,7 @@ function Portfolio(props) {
 
                 {    rows.map(row => {
                     return (
-                        <tr>
+                        <tr key={row[0] + row[1] + row[2] + row[3] + row[4] + row[5]}>
                             <td>{row[0]}</td>
                             <td>{row[1]}</td>
                             <td>{row[2]}</td>
@@ -591,7 +895,7 @@ function Portfolio(props) {
 
             <Card className="shadow marketcard">
                 <CardHeader className="border-0" style={{ backgroundColor: '#333', borderColor: '#333' }}>
-                    <h3 className="actionHeader">AAVE V1 Market</h3>
+                    <h3 className="actionHeader" style={{ paddingTop: "20px" }}>AAVE V1 Market</h3>
                 </CardHeader>
                 <Table className="align-items-center table-flush" style={{ marginBottom: "0px", backgroundColor: '#333', borderColor: '#333' }} bordered responsive>
                     <thead>
