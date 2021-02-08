@@ -10,13 +10,13 @@ const main = async () => {
   console.log("\n\n 📡 Deploying...\n");
 
 
-  const yourContract = await deploy("YourContract") // <-- add in constructor args like line 19 vvvv
-
-  //const secondContract = await deploy("SecondContract")
-
-  // const exampleToken = await deploy("ExampleToken")
-  // const examplePriceOracle = await deploy("ExamplePriceOracle")
-  // const smartContractWallet = await deploy("SmartContractWallet",[exampleToken.address,examplePriceOracle.address])
+  // deploy with mainnet addresses
+  const Aavetrage = await deploy(
+    "Aavetrage",
+    ["0x24a42fD28C976A61Df5D00D0599C34c4f90748c8",
+    "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5",
+    "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"]
+    )
 
 
 
