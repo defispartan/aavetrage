@@ -119,9 +119,10 @@ const stableDebtToken = new ethers.Contract(reserveData["stableDebtTokenAddress"
 await stableDebtToken.approveDelegation(aavetrage.address, ethers.constants.MaxUint256);
 ```
 
-Hardhat task output:
+Hardhat tasks (`aaveV2FlashloanBorrowUserHasNoCollateral` or `aaveV2FlashloanBorrowUserHasCollateral`) output:
 ```
-$ npx hardhat aavetrageV2LeverageBorrow 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+$ npx hardhat aaveV2FlashloanBorrowUserHasNoCollateral 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+
 
 ==========================
 Health Factor before call
