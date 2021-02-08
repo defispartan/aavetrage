@@ -517,7 +517,7 @@ task("aavetrageV2LeverageBorrow", "[Aavetrage] Perform leveraged borrow on Aave 
     const fromSigner = await ethers.provider.getSigner(taskArgs.address);
 
     const Aavetrage = await ethers.getContractFactory("Aavetrage");
-    const aavetrage = await Aavetrage.deploy(v1AaveAddressProviderAddress, v2AaveAddressProviderAddress);
+    const aavetrage = await Aavetrage.deploy(v1AaveAddressProviderAddress, v2AaveAddressProviderAddress, uniswapV2RouterAddress);
 
     const v2AddressProvider = new ethers.Contract(v2AaveAddressProviderAddress, v2AddressProviderABI, provider);
     const v2LendingPoolAddress = await v2AddressProvider.getLendingPool();
@@ -563,5 +563,78 @@ task("aavetrageV2LeverageBorrow", "[Aavetrage] Perform leveraged borrow on Aave 
     )
 
     console.log("");
+    await FetchAndLogAaveV2AccountHealth(v2LendingPool, taskArgs.address);
+  })
+
+task("aaveV2FlashloanBorrow", "[Aavetrage] Perform leveraged borrow on Aave v2")
+  .addPositionalParam("address", "Address to deposit from")
+  .setAction(async (taskArgs, { network, ethers }) => {
+    erc20ABI = require("./contracts/external_abi/common/erc20.json");
+    wethABI = require("./contracts/external_abi/common/WETH9.json");
+    stableDebtTokenABI = require("./contracts/external_abi/aave_v2/StableDebtToken.json");
+    v2AddressProviderABI = require("./contracts/external_abi/aave_v2/LendingPoolAddressesProvider.json");
+    v2LendingPoolABI = require("./contracts/external_abi/aave_v2/LendingPool.json");
+    priceOracleABI = require("./contracts/external_abi/aave_v2/AaveOracle.json");
+    uniswapV2RouterABI = require("./contracts/external_abi/uniswap/UniswapV2Router02.json");
+
+    uniswapV2RouterAddress = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
+    v1AaveAddressProviderAddress = "0x24a42fD28C976A61Df5D00D0599C34c4f90748c8";
+    v2AaveAddressProviderAddress = "0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5";
+    usdcAddress = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    daiAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+    wethAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+
+    const provider = await ethers.getDefaultProvider();
+    const fromSigner = await ethers.provider.getSigner(taskArgs.address);
+
+    const v2AddressProvider = new ethers.Contract(v2AaveAddressProviderAddress, v2AddressProviderABI, provider);
+    const v2LendingPoolAddress = await v2AddressProvider.getLendingPool();
+    const v2LendingPool = new ethers.Contract(v2LendingPoolAddress, v2LendingPoolABI, fromSigner);
+
+    const daiERC20 = new ethers.Contract(daiAddress, erc20ABI, fromSigner);
+    const daiDecimals = 18;
+    const usdcERC20 = new ethers.Contract(usdcAddress, erc20ABI, fromSigner);
+    const usdcDecimals = 6;
+
+    const uniswapV2Router = new ethers.Contract(uniswapV2RouterAddress, uniswapV2RouterABI, fromSigner);
+
+    // buy some usdc
+    let usdcToBuy = ethers.utils.parseUnits("100000", usdcDecimals)
+    let ethToSpend = ethers.utils.parseEther("150.0");
+    await uniswapV2Router.swapETHForExactTokens(
+      usdcToBuy,
+      [wethAddress, usdcAddress],
+      taskArgs.address,
+      Math.floor(Date.now() / 1000) + 60 * 20,
+      {value: ethToSpend})
+
+    const Aavetrage = await ethers.getContractFactory("Aavetrage");
+    const aavetrage = await Aavetrage.deploy(v1AaveAddressProviderAddress, v2AaveAddressProviderAddress, uniswapV2RouterAddress);
+
+    await usdcERC20.approve(aavetrage.address, ethers.constants.MaxUint256)
+
+    // need to make an approval for the borrow asset (on stableDebtToken) in order to incur flashloan
+    const reserveData = await v2LendingPool.getReserveData(daiAddress);
+    const stableDebtToken = new ethers.Contract(reserveData["stableDebtTokenAddress"], stableDebtTokenABI, fromSigner);
+    await stableDebtToken.approveDelegation(aavetrage.address, ethers.constants.MaxUint256);
+
+    /*
+     * call aavetrage
+     */
+
+    console.log("Health Factor before call");
+    await FetchAndLogAaveV2AccountHealth(v2LendingPool, taskArgs.address);
+
+    let daiToBorrow = ethers.utils.parseUnits("300000", daiDecimals)
+    console.log("User providing 100,000 USDC as collateral, borrowing 300,000 DAI with flashloan")
+    let tx = await aavetrage.AaveV2LeveragedDeposit(
+      usdcAddress, usdcToBuy, // collateralAsset, collateralAmount
+      daiAddress, daiToBorrow, // borrowAsset, collateralAmount
+      1 // flashloan mode
+    )
+
+    console.log(tx);
+
+    console.log("Health Factor after call");
     await FetchAndLogAaveV2AccountHealth(v2LendingPool, taskArgs.address);
   })

@@ -100,13 +100,31 @@ User account data for address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
  healthFactor:                1.67781435389127675 ETH
 ```
 
-### Example using hardhat to do a leveraged borrow (ETH as collateral, DAI as borrow)
+### Example using hardhat to do a leveraged borrow (USDC as collateral, DAI as borrow)
 
-This exact pairing is probably not very productive, but it shows the workflow.
+The smart contract will:
 
+1) `transferFrom` the `collateralAmount` from caller to the contract
+2) swap flashedloaned asset for collateral asset (DAI -> USDC) via uniswap (`swappedCollateralAmount`)
+3) deposit `swappedCollateralAmount + collateralAmount` on behalf of caller into Aave v2
+
+
+Token approvals needed:
+1) `collateralAsset` must be approved before calling Aavetrage contract
+2) `stableDebtToken` for the underlying `borrowAsset` must be approved in order for the smart contract to take out a loan on the user's behalf
+```
+// need to make an approval for the borrow asset (on stableDebtToken) in order to incur flashloan
+const reserveData = await v2LendingPool.getReserveData(daiAddress);
+const stableDebtToken = new ethers.Contract(reserveData["stableDebtTokenAddress"], stableDebtTokenABI, fromSigner);
+await stableDebtToken.approveDelegation(aavetrage.address, ethers.constants.MaxUint256);
+```
+
+Hardhat task output:
 ```
 $ npx hardhat aavetrageV2LeverageBorrow 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
+==========================
+Health Factor before call
 ==========================================================
 Aave V2 account data for address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
  totalCollateralETH:          0.0 ETH
@@ -116,19 +134,35 @@ Aave V2 account data for address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
  ltv:                         0
  healthFactor:                115792089237316195423570985008687907853269984665640564039457.584007913129639935
 ==========================================================
-
-calling aavetrage.leveragedDepositV2(wethAddress, 1000000000000000000, daiAddress, 1000000000000000000000)
-depositing 1.0 ETH as collateral
-borrowing and re-depositing 1000.0 DAI
-current DAI price: 0.000654013858756602 ETH
-
+User providing 100,000 USDC as collateral, borrowing 300,000 DAI with flashloan
+{
+  hash: '0x5d9a375ace4939d0942a171a3251b1fb1b9d01bdaf2e2c932484cbd8786bd44a',
+  blockHash: '0xfb87431f1f270c8ac89083bfbfbad6ed4e8ea693cb07c0f9c752362ed1ba6bd9',
+  blockNumber: 11758756,
+  transactionIndex: 0,
+  confirmations: 1,
+  from: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+  gasPrice: BigNumber { _hex: '0x01dcd65000', _isBigNumber: true },
+  gasLimit: BigNumber { _hex: '0x8215f8', _isBigNumber: true },
+  to: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+  value: BigNumber { _hex: '0x00', _isBigNumber: true },
+  nonce: 5,
+  data: '0xeddf9879000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48000000000000000000000000000000000000000000000000000000174876e8000000000000000000000000006b175474e89094c44da98b954eedeac495271d0f000000000000000000000000000000000000000000003f870857a3e0e38000000000000000000000000000000000000000000000000000000000000000000001',
+  r: '0x41711f59f7a75f050d41afdd85020bf2a604ca4f95b80d908cb37e2c0b382533',
+  s: '0x887e12bb6535dfc40560b2d00e676b7416b377cbd17247c163f5c22fc82a7d77',
+  v: 62709,
+  creates: null,
+  chainId: 31337,
+  wait: [Function]
+}
+Health Factor after call
 ==========================================================
 Aave V2 account data for address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
- totalCollateralETH:          1.733555 ETH
- totalDebtETH:                0.733555 ETH
- availableBorrowsETH:         0.616537634 ETH
- currentLiquidationThreshold: 0.000000000000008144 ETH
- ltv:                         7788
- healthFactor:                1.924609868380694017
+ totalCollateralETH:          288.088149204946449887 ETH
+ totalDebtETH:                220.0665 ETH
+ availableBorrowsETH:         10.40401936395715991 ETH
+ currentLiquidationThreshold: 0.0000000000000085 ETH
+ ltv:                         8000
+ healthFactor:                1.112731500815455703
 ==========================================================
 ```
