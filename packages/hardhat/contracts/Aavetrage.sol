@@ -87,9 +87,11 @@ contract Aavetrage {
         (originalSender, collateralAddress, collateralAmount, borrowAddress, borrowAmount) = abi.decode(params, (address, address, uint256, address, uint256));
 
         /*
-        (2) obtain collateral from originalSender
+        (2) obtain collateral from originalSender if specified
          */
-        IERC20(collateralAddress).transferFrom(originalSender, address(this), collateralAmount);
+        if (collateralAmount > 0) {
+            IERC20(collateralAddress).transferFrom(originalSender, address(this), collateralAmount);
+        }
 
         /*
         (3) Swap borrowed funds into collateral asset
@@ -144,7 +146,7 @@ contract Aavetrage {
             0);
     }
 
-    function AaveV2LeveragedDeposit(
+    function AaveV2LeveragedBorrow(
         address collateralAddress, uint256 collateralAmount, address borrowAddress, uint256 borrowAmount, uint256 loanMode
     ) public {
 
