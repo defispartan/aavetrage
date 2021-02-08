@@ -57,6 +57,10 @@ class Admin extends React.Component {
     this.fetchRates()
   }
 
+  clearError = () => {
+    this.setState({ errorActive: false, errorMessage: "" })
+  }
+
   componentDidMount() {
     if (!this.state.ratesLoaded) {
       this.fetchRates()
@@ -76,6 +80,7 @@ class Admin extends React.Component {
             lastRefresh={this.state.lastRefresh}
             errorActive={this.state.errorActive}
             errorMessage={this.state.errorMessage}
+            clearError={this.clearError}
           />
         } />)
       }

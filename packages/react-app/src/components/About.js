@@ -69,13 +69,16 @@ function About(props) {
                     </div>
                     <div className="aboutsection">
                         <h3 className="aboutheader">What is AAVEtrage?</h3>
-                        <p>                    AAVEtrage is dashboard focused on interest rate arbitrage. AAVE offers stable and variable rate borrowing for a variety of stablecoins (and in the future a variety of markets). Each stablecoin has distinct use cases, creating different streams of lending and borrowing demand, creating interest rate spreads. </p>
-                    </div>
-                    <div className="aboutsection">
-                        <h3 className="aboutheader">What is a flashloan?</h3>
+                        <p>AAVEtrage is dashboard focused on interest rate arbitrage. AAVE offers stable and variable rate borrowing for a variety of stablecoins (and in the future a variety of markets). Each stablecoin has distinct use cases, creating different streams of lending and borrowing demand, creating interest rate spreads. </p>
                     </div>
                     <div className="aboutsection">
                         <h3 className="aboutheader">What is the flashloan boost?</h3>
+                    </div>
+                    <div className="aboutsection">
+                        <h3 className="aboutheader">Risks</h3>
+                        <h4>Smart Contract Risk</h4>
+                        <h4>Economic Risk</h4>
+                        <h4>Liquidation Risk</h4>
                     </div>
                     <div style={{ position: 'absolute', bottom: '40px', textAlign: "center", width: '100%', margin: '0 auto' }}>
 

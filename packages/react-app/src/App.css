@@ -105,7 +105,7 @@
   padding-top: 30px;
 }
 .col-2{
-  display: inline-block;
+  display: block;
   font-size: 1.5em;
   width: 50%;
   font-family: 'Orbitron', sans-serif;
@@ -120,10 +120,9 @@
 
 
 .aavetrage {
-  width: 50%;
+  width: 75%;
   display: inline-block;
   padding-top: 30px;
-  padding-bottom: 0px;
 }
 .market{
   display:inline-block;
@@ -140,6 +139,7 @@
 .profit {
 padding-top:0px;
 font-size: 1.25em;
+line-height: 100px;
 
 }
 
@@ -364,7 +364,14 @@ a:hover {
     padding: 10;
 
 }
-
+@media (max-width:1250px){
+  .col-two{
+    width:100%;
+  }
+  .aavetrage{
+    width:100%
+  }
+}
 @media (max-width:1000px){
   .walletpanel{
     width: 100%;
@@ -375,12 +382,6 @@ a:hover {
   }
   .ratematrix{
     width: 90%
-  }
-  .col-two{
-    width:100%;
-  }
-  .aavetrage{
-    width:100%
   }
 }
 

@@ -15,7 +15,7 @@ import { formatEther, parseEther } from "@ethersproject/units";
 import { Hints, ExampleUI } from "../views"
 import PortfolioImg from '../assets/img/portfolio.png'
 import AAVEText from '../assets/img/aavetext.png'
-import { Button, Card, CardBody, CardHeader, Container, Progress, Table, Spinner } from 'reactstrap';
+import { Button, Card, CardBody, CardHeader, Container, Progress, Table, Spinner, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import { getPortfolio } from './Data/GetPortfolio.js'
 import dayjs from "dayjs";
 import { Bar } from "react-chartjs-2";
@@ -152,8 +152,9 @@ function Portfolio(props) {
             }
         },
     })
+    const [errorActive, setErrorActive] = useState(props.errorActive)
+    const [errorMessage, setErrorMessage] = useState(props.errorMessage)
     const [newHealthFactor, setNewHealthFactor] = useState(0.00)
-    const [collatEnabled, setCollatEnabled] = useState()
 
     /* 💵 this hook will get the price of ETH from 🦄 Uniswap: */
     const price = useExchangePrice(mainnetProvider); //1 for xdai
@@ -221,8 +222,14 @@ function Portfolio(props) {
 
     const fetchPortfolioData = async () => {
         let port = await getPortfolio(injectedProvider.provider.selectedAddress, price);
-        setPortfolioData(port)
-        setPortfolioLoaded(true)
+        if (port[0] === true) {
+            setErrorActive(true)
+            setErrorMessage(port[1])
+        }
+        else {
+            setPortfolioData(port)
+            setPortfolioLoaded(true)
+        }
     }
 
     const calcMaxBorrow = () => {
@@ -273,6 +280,7 @@ function Portfolio(props) {
     }, [portfolioData])
 
 
+
     useEffect(() => {
         if (web3Modal.cachedProvider) {
             loadWeb3Modal();
@@ -290,6 +298,8 @@ function Portfolio(props) {
         setRates(props.rates)
         setRatesLoaded(props.ratesLoaded)
         setLastRefresh(props.lastRefresh)
+        setErrorActive(props.errorActive)
+        setErrorMessage(props.errorMessage)
 
     }, [props])
 
@@ -581,8 +591,8 @@ function Portfolio(props) {
         else {
             return (rates[aavetrageDepositSelect[0]][1][0])
         }
-
     }
+
 
     const displayAAVEtrageSelect = () => {
         console.log(portfolioData[1])
@@ -813,6 +823,7 @@ minutes ago
     }
 
     const displayV2Portfolio = () => {
+
         return (
             <div className="ratematrix">
 
@@ -852,6 +863,7 @@ minutes ago
                 {displayV2ActionPanel()}
             </div>
         )
+
     }
     const displayV1Table = () => {
         let split = splitReserves(portfolioData[0].reservesData)
@@ -891,6 +903,7 @@ minutes ago
         )
     }
     const displayV1Portfolio = () => {
+
         return (<div className="ratematrix">
 
             <Card className="shadow marketcard">
@@ -928,6 +941,68 @@ minutes ago
             </div>
             {displayV1ActionPanel()}
         </div>)
+
+
+    }
+
+    const displayPortfolioBody = () => {
+        if (!errorActive) {
+            return (<div className="asset">
+
+                <h3 className="portfolioheader">AAVE Portfolio Balance</h3>
+                <h3 className="portfolioheader" style={{ fontFamily: 'Open Sans', paddingBottom: "50px" }}>{calcTotalBalance()}</h3>
+
+                <div className="marketoverview">
+
+                    <div className="marketheaderblock" style={{ paddingBottom: "75px" }}>
+                        <h4 style={{ color: 'white' }}>AAVE V1 Market</h4>
+                        <div className="marketheaderblock">
+                            <h5 style={{ color: "white" }}>Deposits</h5>
+                            <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[0].totalCollateralUSD, 2))}</h5>
+                        </div>
+                        <div className="marketheaderblock">
+                            <h5 style={{ color: "white" }}>Borrows</h5>
+                            <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[0].totalBorrowsUSD, 2))}</h5>
+                        </div>
+                        <div className="borrowpower">
+                            <h5 style={{ color: 'white' }}>Borrowing Power Used - {calcBorrowPercent("v1") + "%"}</h5>
+                            <Progress value={calcBorrowPercent("v1")} />
+                        </div>
+
+
+                    </div>
+                    <div className="marketheaderblock" style={{ paddingBottom: "75px" }}>
+                        <h4 style={{ color: 'white' }}>AAVE V2 Market</h4>
+                        <div className="marketheaderblock">
+                            <h5 style={{ color: "white" }}>Deposits</h5>
+                            <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[1].totalCollateralUSD, 2))}</h5>
+                        </div>
+                        <div className="marketheaderblock">
+                            <h5 style={{ color: "white" }}>Borrows</h5>
+                            <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[1].totalBorrowsUSD, 2))}</h5>
+                        </div>
+                        <div className="borrowpower">
+                            <h5 style={{ color: 'white' }}>Borrowing Power Used - {calcBorrowPercent("v2") + "%"}</h5>
+                            <Progress value={calcBorrowPercent("v2")} />
+                        </div>
+
+
+                    </div>
+                </div>
+
+
+
+
+                {displayV2Portfolio()}
+                {displayV1Portfolio()}
+
+
+
+            </div>)
+        }
+        else {
+            return <></>
+        }
     }
 
     const displayPortfolio = () => {
@@ -942,56 +1017,20 @@ minutes ago
             }
             else {
                 return (
-                    <div className="asset">
-
-                        <h3 className="portfolioheader">AAVE Portfolio Balance</h3>
-                        <h3 className="portfolioheader" style={{ fontFamily: 'Open Sans', paddingBottom: "50px" }}>{calcTotalBalance()}</h3>
-
-                        <div className="marketoverview">
-
-                            <div className="marketheaderblock" style={{ paddingBottom: "75px" }}>
-                                <h4 style={{ color: 'white' }}>AAVE V1 Market</h4>
-                                <div className="marketheaderblock">
-                                    <h5 style={{ color: "white" }}>Deposits</h5>
-                                    <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[0].totalCollateralUSD, 2))}</h5>
-                                </div>
-                                <div className="marketheaderblock">
-                                    <h5 style={{ color: "white" }}>Borrows</h5>
-                                    <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[0].totalBorrowsUSD, 2))}</h5>
-                                </div>
-                                <div className="borrowpower">
-                                    <h5 style={{ color: 'white' }}>Borrowing Power Used - {calcBorrowPercent("v1") + "%"}</h5>
-                                    <Progress value={calcBorrowPercent("v1")} />
-                                </div>
-
-                            </div>
-                            <div className="marketheaderblock" style={{ paddingBottom: "75px" }}>
-                                <h4 style={{ color: 'white' }}>AAVE V2 Market</h4>
-                                <div className="marketheaderblock">
-                                    <h5 style={{ color: "white" }}>Deposits</h5>
-                                    <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[1].totalCollateralUSD, 2))}</h5>
-                                </div>
-                                <div className="marketheaderblock">
-                                    <h5 style={{ color: "white" }}>Borrows</h5>
-                                    <h5 style={{ fontFamily: 'Open Sans', color: "white" }}>{"$" + numberWithCommas(round(portfolioData[1].totalBorrowsUSD, 2))}</h5>
-                                </div>
-                                <div className="borrowpower">
-                                    <h5 style={{ color: 'white' }}>Borrowing Power Used - {calcBorrowPercent("v2") + "%"}</h5>
-                                    <Progress value={calcBorrowPercent("v2")} />
-                                </div>
-
-                            </div>
-                        </div>
-
-
-
-
-                        {displayV2Portfolio()}
-                        {displayV1Portfolio()}
-
-
-
-                    </div>)
+                    <>
+                        <Modal isOpen={errorActive} centered={true}>
+                            <ModalHeader>{"Error"}</ModalHeader>
+                            <ModalBody>
+                                {errorMessage}
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button color="secondary" onClick={() => props.clearError()}>
+                                    Close
+          </Button>
+                            </ModalFooter>
+                        </Modal>
+                        {displayPortfolioBody()}
+                    </>)
             }
         }
         else {

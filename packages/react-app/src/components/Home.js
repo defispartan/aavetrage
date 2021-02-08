@@ -136,8 +136,8 @@ const Home = () => {
 
 
 
-            return (<div> <div className="col-two head">Best Overall AAVEtrage (All Markets)</div>
-                <div className="col-two head">Best V2 AAVEtrage</div>
+            return (<><div className="col-two"> <div className="head">Best Overall AAVEtrage (All Markets)</div>
+
                 <div className="aavetrage">
                     <div className="col-four">
                         <img src={Ghost} className="ghost"></img>
@@ -175,52 +175,63 @@ const Home = () => {
                         <h5 style={{ fontFamily: "Orbitron", color: "white", paddingTop: "10px" }}>Deposit</h5>
                     </div>
 
+                    <div className="profit"><strong>{round(bestDeposit[2] - bestBorrow[2], 2)}</strong> % (Variable Borrow) or <strong>{round(bestDeposit[2] - bestStableBorrow[2], 2)}</strong> % (Stable Borrow) Spread</div>
+
 
                 </div>
-                <div className="aavetrage">
-                    <div className="col-four">
-                        <img src={Ghost} className="ghost"></img>
-                        <i className="fa fa-arrow-right" style={{ marginLeft: "30px", fontSize: "3em" }}></i>
-                        <h5 style={{ fontFamily: "Orbitron", color: "white", paddingTop: "10px" }}>Borrow</h5>
-                    </div>
-                    <div className="col-four">
-                        <div className="borrowWrap">
+            </div>
+                <div className="col-two">
+                    <div className="head">Best V2 AAVEtrage</div>
+                    <div className="aavetrage">
+                        <div className="col-four">
+                            <img src={Ghost} className="ghost"></img>
+                            <i className="fa fa-arrow-right" style={{ marginLeft: "30px", fontSize: "3em" }}></i>
+                            <h5 style={{ fontFamily: "Orbitron", color: "white", paddingTop: "10px" }}>Borrow</h5>
+                        </div>
+                        <div className="col-four">
+                            <div className="borrowWrap">
+                                <Card style={{ marginRight: "20px", marginLeft: "20px" }}>
+                                    <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>AAVE V2</h5>
+                                    <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>{ops[1][3]}</h5>
+                                    <h4 style={{ color: "#2EBAC6", padding: "2px", margin: "0" }}>{ops[1][2]}%</h4>
+                                    <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>Variable</h5>
+                                </Card>
+
+                                <Card style={{ marginRight: "20px", marginLeft: "20px", marginTop: "30px" }}>
+                                    <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>AAVE V2</h5>
+                                    <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>{ops[1][5]}</h5>
+                                    <h4 style={{ color: "#B6509E", padding: "2px", margin: "0" }}>{ops[1][4]}%</h4>
+                                    <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>Stable</h5>
+                                </Card>
+                            </div>
+                        </div>
+                        <div className="col-four">
                             <Card style={{ marginRight: "20px", marginLeft: "20px" }}>
                                 <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>AAVE V2</h5>
-                                <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>{ops[1][3]}</h5>
-                                <h4 style={{ color: "#2EBAC6", padding: "2px", margin: "0" }}>{ops[1][2]}%</h4>
+                                <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>{ops[1][1]}</h5>
+                                <h4 style={{ color: "#2EBAC6", padding: "2px", margin: "0" }}>{ops[1][0]}%</h4>
                                 <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>Variable</h5>
                             </Card>
 
-                            <Card style={{ marginRight: "20px", marginLeft: "20px", marginTop: "30px" }}>
-                                <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>AAVE V2</h5>
-                                <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>{ops[1][5]}</h5>
-                                <h4 style={{ color: "#B6509E", padding: "2px", margin: "0" }}>{ops[1][4]}%</h4>
-                                <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>Stable</h5>
-                            </Card>
                         </div>
-                    </div>
-                    <div className="col-four">
-                        <Card style={{ marginRight: "20px", marginLeft: "20px" }}>
-                            <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>AAVE V2</h5>
-                            <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>{ops[1][1]}</h5>
-                            <h4 style={{ color: "#2EBAC6", padding: "2px", margin: "0" }}>{ops[1][0]}%</h4>
-                            <h5 style={{ fontFamily: "Orbitron", color: "black", padding: "2px", margin: "0" }}>Variable</h5>
-                        </Card>
-
-                    </div>
-                    <div className="col-four">
-                        <i className="fa fa-arrow-right" style={{ marginRight: "30px", fontSize: "3em" }}></i>
-                        <img src={Ghost} className="ghost"></img>
-                        <h5 style={{ fontFamily: "Orbitron", color: "white", paddingTop: "10px" }}>Deposit</h5>
-                    </div>
+                        <div className="col-four">
+                            <i className="fa fa-arrow-right" style={{ marginRight: "30px", fontSize: "3em" }}></i>
+                            <img src={Ghost} className="ghost"></img>
+                            <h5 style={{ fontFamily: "Orbitron", color: "white", paddingTop: "10px" }}>Deposit</h5>
+                        </div>
+                        <div className="profit"><strong>{round(ops[1][0] - ops[1][2], 2)}</strong> % (Variable Borrow) or <strong>{round(ops[1][0] - ops[1][4], 2)}</strong> % (Stable Borrow) Spread <div style={{ display: "inline" }} onClick={() => toggleKawai()}><a><img src={Boost} className="boost"></img></a></div></div>
 
 
+                    </div>
                 </div>
-                <div className="col-two profit"><strong>{round(bestDeposit[2] - bestBorrow[2], 2)}</strong> % (Variable Borrow) or <strong>{round(bestDeposit[2] - bestStableBorrow[2], 2)}</strong> % (Stable Borrow) Spread</div>
-                <div className="col-two profit"><strong>{round(ops[1][0] - ops[1][2], 2)}</strong> % (Variable Borrow) or <strong>{round(ops[1][0] - ops[1][4], 2)}</strong> % (Stable Borrow) Spread <div style={{ display: "inline" }} onClick={() => toggleKawai()}><a><img src={Boost} className="boost"></img></a></div></div>
-                <div className="tableheader">Stablecoin Rates</div>
-            </div>)
+
+
+
+
+
+
+                <div className="tableheader">Stablecoin Rates</div></>)
+
         }
         else {
             return (
