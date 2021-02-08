@@ -21,6 +21,7 @@ import dayjs from "dayjs";
 import { Bar } from "react-chartjs-2";
 import RangeSlider from 'react-bootstrap-range-slider';
 import NumericInput from 'react-numeric-input';
+import { ethers } from "ethers";
 /*
     Welcome to 🏗 scaffold-eth !
 
@@ -593,6 +594,36 @@ function Portfolio(props) {
         }
     }
 
+    const getAddress = (market, asset) => {
+        if (market === 'v2') {
+            if (asset === 'usdt') {
+                return ('0xdac17f958d2ee523a2206206994597c13d831ec7')
+            }
+            else if (asset === 'usdc') {
+                return ('0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48')
+            }
+            else if (asset === 'tusd') {
+                return ('0x0000000000085d4780B73119b644AE5ecd22b376')
+            }
+        }
+
+    }
+
+    const executeAAVEtrage = () => {
+        let depositAddress = getAddress(aavetrageDepositSelect[2], aavetrageDepositSelect[0])
+        let depositAmount = 0
+        let borrowAddress = getAddress(aavetrageBorrowSelect[2], aavetrageBorrowSelect[0])
+
+        let borrowAmount = selectedBorrowAmount
+        let mode = 0
+        if (aavetrageBorrowSelect[1] === 'variable') {
+            mode = 2
+        }
+        else {
+            mode = 1
+        }
+        borrowAmount = ethers.utils.parseUnits(selectedBorrowAmount, 18)
+    }
 
     const displayAAVEtrageSelect = () => {
         console.log(portfolioData[1])
@@ -626,7 +657,7 @@ function Portfolio(props) {
                             <h5 className="actionHeader">Health Factor Change</h5>
                             <p style={{ color: "#50d45e" }}>{round(portfolioData[1].healthFactor, 2)} &#8594; {round(newHealthFactor, 2)}</p>
                         </div>
-                        <div style={{ width: "33%", margin: "0 auto", float: "center", paddingTop: "20px" }}><Button color="success">Execute AAVEtrage</Button></div>
+                        <div style={{ width: "33%", margin: "0 auto", float: "center", paddingTop: "20px" }}><Button color="success" onClick={() => { executeAAVEtrage() }}>Execute AAVEtrage</Button></div>
                     </div>
                 </>)
         }
@@ -1039,7 +1070,6 @@ minutes ago
     }
 
     const displayFaucet = () => {
-        return (<></>)
         if (injectedProvider !== null) {
             return (<div style={{ position: "fixed", textAlign: "left", left: 0, bottom: 20, padding: 10 }}>
                 <Row align="middle" gutter={[4, 4]}>
