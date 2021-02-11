@@ -156,6 +156,7 @@ function Portfolio(props) {
     const [errorActive, setErrorActive] = useState(props.errorActive)
     const [errorMessage, setErrorMessage] = useState(props.errorMessage)
     const [newHealthFactor, setNewHealthFactor] = useState(0.00)
+    const [displayUnderConstruction, setDisplayUnderConstruction] = useState(false)
 
     /* 💵 this hook will get the price of ETH from 🦄 Uniswap: */
     const price = useExchangePrice(mainnetProvider); //1 for xdai
@@ -609,20 +610,28 @@ function Portfolio(props) {
 
     }
 
+    const toggleDisplayUnderConstruction = () => {
+        setDisplayUnderConstruction(!displayUnderConstruction)
+    }
     const executeAAVEtrage = () => {
-        let depositAddress = getAddress(aavetrageDepositSelect[2], aavetrageDepositSelect[0])
-        let depositAmount = 0
-        let borrowAddress = getAddress(aavetrageBorrowSelect[2], aavetrageBorrowSelect[0])
-
-        let borrowAmount = selectedBorrowAmount
-        let mode = 0
-        if (aavetrageBorrowSelect[1] === 'variable') {
-            mode = 2
-        }
-        else {
-            mode = 1
-        }
-        borrowAmount = ethers.utils.parseUnits(selectedBorrowAmount, 18)
+        /*         let depositAddress = getAddress(aavetrageDepositSelect[2], aavetrageDepositSelect[0])
+                let depositAmount = 0
+                let borrowAddress = getAddress(aavetrageBorrowSelect[2], aavetrageBorrowSelect[0])
+        
+                let borrowAmount = selectedBorrowAmount
+                let mode = 0
+                if (aavetrageBorrowSelect[1] === 'variable') {
+                    mode = 2
+                }
+                else {
+                    mode = 1
+                }
+                borrowAmount = ethers.utils.parseUnits(selectedBorrowAmount, 18)
+                console.log([depositAddress, depositAmount, borrowAddress, borrowAmount, mode])
+                tx(writeContracts.Aavetrage.AaveV2LeveragedBorrow(depositAddress, 0, borrowAddress, borrowAmount, mode)) */
+        setDisplayUnderConstruction(true)
+        console.log("SET CONSTRUCTION")
+        console.log(displayUnderConstruction)
     }
 
     const displayAAVEtrageSelect = () => {
@@ -657,8 +666,8 @@ function Portfolio(props) {
                             <h5 className="actionHeader">Health Factor Change</h5>
                             <p style={{ color: "#50d45e" }}>{round(portfolioData[1].healthFactor, 2)} &#8594; {round(newHealthFactor, 2)}</p>
                         </div>
-                        <div style={{ width: "33%", margin: "0 auto", float: "center", paddingTop: "20px" }}><Button color="success" onClick={() => { executeAAVEtrage() }}>Execute AAVEtrage</Button></div>
                     </div>
+                    <div style={{ width: "100%", margin: "0 auto", float: "center", paddingTop: "50px" }}><Button color="success" onClick={() => { executeAAVEtrage() }}>Execute AAVEtrage</Button></div>
                 </>)
         }
         else {
@@ -1060,6 +1069,17 @@ minutes ago
           </Button>
                             </ModalFooter>
                         </Modal>
+                        <Modal isOpen={displayUnderConstruction} centered={true}>
+                            <ModalHeader>{"Under Construction 🏗"}</ModalHeader>
+                            <ModalBody>
+                                The AAVEtrage smart contracts and UI are currently under construction. Check back soon for access to easy interest rate arbitrage!
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button color="secondary" onClick={() => toggleDisplayUnderConstruction()}>
+                                    Close
+          </Button>
+                            </ModalFooter>
+                        </Modal>
                         {displayPortfolioBody()}
                     </>)
             }
@@ -1070,6 +1090,7 @@ minutes ago
     }
 
     const displayFaucet = () => {
+        return <></>
         if (injectedProvider !== null) {
             return (<div style={{ position: "fixed", textAlign: "left", left: 0, bottom: 20, padding: 10 }}>
                 <Row align="middle" gutter={[4, 4]}>

@@ -138,10 +138,11 @@
 
 .profit {
 padding-top:0px;
-font-size: 1.25em;
+font-size: 1.10em;
 line-height: 100px;
 
 }
+
 
 .col-two{
   display:inline-block;
@@ -167,6 +168,7 @@ line-height: 100px;
 
 .boost{
   width:20%;
+  max-width: 100px;
 }
 
 .tableheader {
@@ -238,6 +240,7 @@ text-align: center;
 
 .aboutheader{
   color: white;
+  padding-top: 30px;
 
 }
 .aboutsection{
@@ -356,6 +359,18 @@ a:hover {
   margin: 0 auto;
 }
 
+
+.kawaiAbout{
+  width: 30%;
+  height: auto; 
+  margin: 0 auto;
+  min-width: 325px;
+}
+.kawaiHead{
+  text-align: center;
+  padding-bottom: 30px;
+}
+
 .walletpanel{
    position: absolute;
    text-align: right;
@@ -364,7 +379,7 @@ a:hover {
     padding: 10;
 
 }
-@media (max-width:1250px){
+@media (max-width:1392px){
   .col-two{
     width:100%;
   }
@@ -396,4 +411,23 @@ a:hover {
   width: 80%;
   margin: 0 auto;
   padding-bottom: 40px;
+}
+
+.compRow{display: table;
+width: 100%;
+table-layout: fixed;
+padding-top:30px;
+padding-bottom: 30px;}
+
+.compElement{
+  display: table-cell;
+  vertical-align: top;
+  width: 100%;
+  text-align: center;
+}
+
+.comp{
+  width: 30%;
+
+  min-width: 300px;
 }
